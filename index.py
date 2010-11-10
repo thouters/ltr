@@ -19,119 +19,121 @@ views = {
 }
 
 def crawl(db,workdir,box,path="/"):
-    diskpath = workdir+path
-    names = listdir(diskpath)
+    dirqueue=["/"]
 
-    if ".ltr" in names:
-        if path != "/":
-            print "ltr: skipping ltrdir ", diskpath
-            return
-        names.remove(".ltr")
+    while len(dirqueue):
+        path = dirqueue.pop(0)
 
-    if ".ltrignore" in names:
-        f = open(diskpath+"/.ltrignore","r")
-        ignores = f.readlines()
-        f.close()
-        if "." in ignores:
-            return
-        for ignore in ignores:
-            if ignore in names:
-                names.remove(ignore)
-
-    print "ltr: scanning ",diskpath
-
-    results = list(db.view("ltrcrawler/nodes",key=path))
-    filter_this_box = lambda x: x["value"]["box"] == box["_id"]
-    results = filter(filter_this_box,results)
-    known_files = dict(map(lambda x: (x["value"]["name"],x['value']),results))
-    #filter on box
-    dirs = []
-    entries = []
-    for filename in names:
-        now = {}
-        knownfile = False
-        updated = False
-        srcname = diskpath+"/"+filename
-
-        now["box"]= box["_id"]
-        now["path"]= path
-        now["name"]= filename
-        now["doctype"] = "node"
-
-        if isfile(srcname):
-            now['ftype'] = "file"
-        elif isdir(srcname) and not ismount(srcname):
-            now['ftype'] = "dir" 
-        elif islink(srcname):
-            now['ftype'] = "symlink"
-            now["linkref"] = readlink(srcname)
-        else:
-            now['ftype'] = "other"
-
-
-        if now['ftype'] != "symlink":
-            st = stat(srcname)
-            now["mtime"] = st.st_mtime
-            now["size"] = st.st_size
-    
-        if filename in known_files:
-            knownfile = known_files[filename]
-        else:
-            now["_id"]= uuid.uuid4().hex
-            
-        if now["ftype"] == "file" \
-        and (not knownfile \
-        or knownfile["mtime"] != now["mtime"]):
-            f = open(srcname)
-            h = hashlib.sha1()
-            print "Digest ", srcname
-            h.update(f.read())
-            now["hash"] = h.hexdigest()
+        diskpath = workdir+path
+        names = listdir(diskpath)
+        
+        if ".ltr" in names:
+            if path != "/":
+                print "ltr: skipping ltrdir ", diskpath
+                return
+            names.remove(".ltr")
+        
+        if ".ltrignore" in names:
+            f = open(diskpath+"/.ltrignore","r")
+            ignores = f.readlines()
             f.close()
-            #fixme; no memory mapping possible
-            magiccmd = "/usr/bin/file -b --mime-type -- -"
-            fd = open(srcname,'r')
-            now["mime"] = subprocess.Popen(magiccmd, shell=True, \
-                 stdin=fd, stdout=subprocess.PIPE).communicate()[0]
-            fd.close()
-
-        if knownfile:
-            for attr in ["ftype","mtime","size","hash"]:
-                if attr in now:
-                    if not attr in knownfile or knownfile[attr] != now[attr]:
-                        updated=True
-                        break
-
-        if not filename in known_files:
-            print "new file: ", srcname
-            entries.append(now)
-        elif updated:
-            print "file changed: ", srcname
-            print knownfile, now
-            now["_id"] = knownfile["_id"]
-            entries.append(now)
-
-        if now['ftype']=="dir":
-            if path == "/":
-                dirs.append(path+filename)
+            if "." in ignores:
+                return
+            for ignore in ignores:
+                if ignore in names:
+                    names.remove(ignore)
+        
+        print "ltr: scanning ",diskpath
+        
+        results = list(db.view("ltrcrawler/nodes",key=path))
+        filter_this_box = lambda x: x["value"]["box"] == box["_id"]
+        results = filter(filter_this_box,results)
+        known_files = dict(map(lambda x: (x["value"]["name"],x['value']),results))
+        #filter on box
+        dirs = []
+        entries = []
+        for filename in names:
+            now = {}
+            knownfile = False
+            updated = False
+            srcname = diskpath+"/"+filename
+        
+            now["box"]= box["_id"]
+            now["path"]= path
+            now["name"]= filename
+            now["doctype"] = "node"
+        
+            if isfile(srcname):
+                now['ftype'] = "file"
+            elif isdir(srcname) and not ismount(srcname):
+                now['ftype'] = "dir" 
+            elif islink(srcname):
+                now['ftype'] = "symlink"
+                now["linkref"] = readlink(srcname)
             else:
-                dirs.append(path+"/"+filename)
+                now['ftype'] = "other"
+        
+        
+            if now['ftype'] != "symlink":
+                st = stat(srcname)
+                now["mtime"] = st.st_mtime
+                now["size"] = st.st_size
+        
+            if filename in known_files:
+                knownfile = known_files[filename]
+            else:
+                now["_id"]= uuid.uuid4().hex
+                
+            if now["ftype"] == "file" \
+            and (not knownfile \
+            or knownfile["mtime"] != now["mtime"]):
+                f = open(srcname)
+                h = hashlib.sha1()
+                print "Digest ", srcname
+                h.update(f.read())
+                now["hash"] = h.hexdigest()
+                f.close()
+                #fixme; no memory mapping possible
+                magiccmd = "/usr/bin/file -b --mime-type -- -"
+                fd = open(srcname,'r')
+                now["mime"] = subprocess.Popen(magiccmd, shell=True, \
+                     stdin=fd, stdout=subprocess.PIPE).communicate()[0]
+                fd.close()
+        
+            if knownfile:
+                for attr in ["ftype","mtime","size","hash"]:
+                    if attr in now:
+                        if not attr in knownfile or knownfile[attr] != now[attr]:
+                            updated=True
+                            break
+        
+            if not filename in known_files:
+                print "new file: ", srcname
+                entries.append(now)
+            elif updated:
+                print "file changed: ", srcname
+                print knownfile, now
+                now["_id"] = knownfile["_id"]
+                entries.append(now)
+        
+            if now['ftype']=="dir":
+                if path == "/":
+                    dirqueue.append(path+filename)
+                else:
+                    dirqueue.append(path+"/"+filename)
+        
+            if filename in known_files:
+                del known_files[filename]
 
-        if filename in known_files:
-            del known_files[filename]
-
-    #fixme: recurse into directories to delete 
-    if len(known_files.keys()):
-        for doc in known_files.itervalues():
-            print "ltr: removed ", doc["name"]
-            doc["_deleted"] = True
-            entries.append(doc)
-
-    if len(entries):
-        db.update(entries)
-
-    for directory in dirs:
-        crawl(db,workdir,box,directory)
+        #fixme: recurse into directories to delete 
+        if len(known_files.keys()):
+            for doc in known_files.itervalues():
+                print "ltr: removed ", doc["name"]
+                doc["_deleted"] = True
+                entries.append(doc)
+        
+        if len(entries):
+            db.update(entries)
 
 if __name__ == "__main__":
 

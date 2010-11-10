@@ -1,6 +1,17 @@
-add update log directly to doc
+track renames, recursive deletes
+  crawling:
+    removed: add id to disapeared[]
+    added: add JSON to added[]
+    if not --init: db.update
+
+  lookup hash, path
+
+
+
+
+  
+
 fs mirror policy
 desktopcouch support
-track renames
-track recursive deletes
 view by hash
+add update log directly to doc
