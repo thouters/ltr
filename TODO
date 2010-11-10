@@ -1,5 +1,4 @@
 add update log directly to doc
-.ltrignore/db blacklists
 fs mirror policy
 desktopcouch support
 track renames

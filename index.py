@@ -28,6 +28,16 @@ def crawl(db,workdir,box,path="/"):
             return
         names.remove(".ltr")
 
+    if ".ltrignore" in names:
+        f = open(diskpath+"/.ltrignore","r")
+        ignores = f.readlines()
+        f.close()
+        if "." in ignores:
+            return
+        for ignore in ignores:
+            if ignore in names:
+                names.remove(ignore)
+
     print "ltr: scanning ",diskpath
 
     results = list(db.view("ltrcrawler/nodes",key=path))
