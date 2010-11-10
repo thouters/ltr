@@ -8,6 +8,7 @@ from datetime import datetime
 from os.path import isfile, isdir, islink, ismount, join
 from os import listdir, readlink, stat
 import hashlib
+import subprocess
 from sys import argv
 from socket import gethostname
 
@@ -77,6 +78,12 @@ def crawl(db,workdir,box,path="/"):
             h.update(f.read())
             now["hash"] = h.hexdigest()
             f.close()
+            #fixme; no memory mapping possible
+            magiccmd = "/usr/bin/file -b --mime-type -- -"
+            fd = open(srcname,'r')
+            now["mime"] = subprocess.Popen(magiccmd, shell=True, \
+                 stdin=fd, stdout=subprocess.PIPE).communicate()[0]
+            fd.close()
 
         if knownfile:
             for attr in ["ftype","mtime","size","hash"]:
