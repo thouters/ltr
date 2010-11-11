@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 
-import os, shutil,sys
 import uuid
-import pprint
 import couchdb
 from datetime import datetime
-from os.path import isfile, isdir, islink, ismount, join
-from os import listdir, readlink, stat
-import hashlib
-import subprocess
 from sys import argv
 from socket import gethostname
+from ltr import LtrDrop, LtrBoxRoot
 
 views = {
     'boxes': { 'map': open("views/boxes/map.js").read() },
@@ -18,6 +13,9 @@ views = {
     'by-path': { 'map': open("views/by-path/map.js").read() },
     'dirs': { 'map':  open("views/dirs/map.js").read() },
 }
+
+
+   
 
 def crawl(db,workdir,box,path="/"):
     dirqueue=["/"]
