@@ -14,6 +14,7 @@ from socket import gethostname
 
 views = {
     'boxes': { 'map': open("views/boxes/map.js").read() },
+    'hashes': { 'map': open("views/hashes/map.js").read() },
     'nodes': { 'map': open("views/nodes/map.js").read() },
     'dirs': { 'map':  open("views/dirs/map.js").read() },
 }
@@ -135,10 +136,20 @@ def crawl(db,workdir,box,path="/"):
                 print "ltr: disapeared ", doc["name"]
                 disapeared.append((doc["_id"],doc["_rev"],doc["hash"]))
         
-        if len(news):
-            db.update(news)
         if len(updates):
             db.update(updates)
+
+    for i,new in enumerate(news):
+        trail = filter(lambda (_id,_rev,_hash): _hash == new["hash"], disapeared)
+        if len(trail): 
+            disapeared.remove(trail[0])
+            (_id,_rev,_hash) = trail[0]
+            print "ltr: reappear ", new["name"]
+            news[i]["_id"] = _id
+            news[i]["_rev"] = _rev
+
+    if len(news):
+        db.update(news)
 
     updates = []
     for (_id,_rev,_hash) in disapeared:
