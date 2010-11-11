@@ -15,13 +15,14 @@ from socket import gethostname
 views = {
     'boxes': { 'map': open("views/boxes/map.js").read() },
     'hashes': { 'map': open("views/hashes/map.js").read() },
-    'nodes': { 'map': open("views/nodes/map.js").read() },
+    'by-path': { 'map': open("views/by-path/map.js").read() },
     'dirs': { 'map':  open("views/dirs/map.js").read() },
 }
 
 def crawl(db,workdir,box,path="/"):
     dirqueue=["/"]
     disapeared = []
+    news = []
 
     while len(dirqueue):
         path = dirqueue.pop(0)
@@ -47,16 +48,15 @@ def crawl(db,workdir,box,path="/"):
         
         print "ltr: crawl ",diskpath
         
-        results = list(db.view("ltrcrawler/nodes",key=path))
-        filter_this_box = lambda x: x["value"]["box"] == box["_id"]
+        results = list(db.view("ltrcrawler/by-path",key=path))
+        filter_this_box = lambda x: box["_id"] in x["value"]["present"] 
         results = filter(filter_this_box,results)
         known_files = dict(map(lambda x: (x["value"]["name"],x['value']),results))
         #filter on box
-        dirs = []
-        news = []
         updates = []
         for filename in names:
             now = {}
+            meta = {}
             knownfile = False
             updated = False
             srcname = diskpath+"/"+filename
@@ -66,26 +66,23 @@ def crawl(db,workdir,box,path="/"):
             else:
                 volumepath = path+"/"+filename
 
-            now["box"]= box["_id"]
+            now["present"]= [box["_id"]]
             now["path"]= path
             now["name"]= filename
             now["doctype"] = "node"
         
             if isfile(srcname):
-                now['ftype'] = "file"
+                meta['ftype'] = "file"
             elif isdir(srcname) and not ismount(srcname):
-                now['ftype'] = "dir" 
+                meta['ftype'] = "dir" 
             elif islink(srcname):
-                now['ftype'] = "symlink"
-                now["linkref"] = readlink(srcname)
+                meta['ftype'] = "symlink"
             else:
-                now['ftype'] = "other"
+                meta['ftype'] = "other"
         
-        
-            if now['ftype'] != "symlink":
-                st = stat(srcname)
-                now["mtime"] = st.st_mtime
-                now["size"] = st.st_size
+            st = stat(srcname)
+            meta["mtime"] = st.st_mtime
+            meta["size"] = st.st_size
         
             if filename in known_files:
                 knownfile = known_files[filename]
@@ -93,38 +90,49 @@ def crawl(db,workdir,box,path="/"):
             else:
                 now["_id"]= uuid.uuid4().hex
                 
-            if now["ftype"] == "file" \
+            if meta["ftype"] == "file" \
             and (not knownfile \
-            or knownfile["mtime"] != now["mtime"]):
+            or knownfile["meta"]["mtime"] != meta["mtime"]):
                 f = open(srcname)
                 h = hashlib.sha1()
                 print "ltr: digest ", volumepath
                 h.update(f.read())
-                now["hash"] = h.hexdigest()
+                meta["hash"] = h.hexdigest()
                 f.close()
                 #fixme; no memory mapping possible
                 magiccmd = "/usr/bin/file -b --mime-type -- -"
                 fd = open(srcname,'r')
-                now["mime"] = subprocess.Popen(magiccmd, shell=True, \
+                meta["mime"] = subprocess.Popen(magiccmd, shell=True, \
                      stdin=fd, stdout=subprocess.PIPE).communicate()[0]
                 fd.close()
         
             if knownfile:
-                for attr in ["ftype","mtime","size","hash"]:
-                    if attr in now:
-                        if not attr in knownfile or knownfile[attr] != now[attr]:
+                if meta["ftype"] == "dir":
+                    test = ["ftype"]
+                elif meta["ftype"] == "file":
+                    test = ["ftype","mtime","size","hash"]
+                elif meta["ftype"] == "symlink":
+                    test = ["ftype","mtime"]
+
+                for attr in test:
+                    if attr in meta:
+                        if not attr in knownfile["meta"] or knownfile["meta"][attr] != meta[attr]:
                             updated=True
                             break
+
+            now["meta"] = meta
         
             if not filename in known_files:
                 print "ltr: new ", volumepath
                 news.append(now)
             elif updated:
                 print "ltr: changed ", volumepath
-                now["_id"] = knownfile["_id"]
+                if not box["_id"] in knownfile["present"]:
+                    knownfile["present"].append(box[_id])
+                knownfile["meta"] = meta
                 updates.append(now)
         
-            if now['ftype']=="dir":
+            if meta['ftype']=="dir":
                 dirqueue.append(volumepath)
         
             if filename in known_files:
@@ -134,13 +142,13 @@ def crawl(db,workdir,box,path="/"):
         if len(known_files.keys()):
             for doc in known_files.itervalues():
                 print "ltr: disapeared ", doc["name"]
-                disapeared.append((doc["_id"],doc["_rev"],doc["hash"]))
+                disapeared.append((doc["_id"],doc["_rev"],doc["meta"]["hash"]))
         
         if len(updates):
             db.update(updates)
 
     for i,new in enumerate(news):
-        trail = filter(lambda (_id,_rev,_hash): _hash == new["hash"], disapeared)
+        trail = filter(lambda (_id,_rev,_hash): _hash == new["meta"]["hash"], disapeared)
         if len(trail): 
             disapeared.remove(trail[0])
             (_id,_rev,_hash) = trail[0]
