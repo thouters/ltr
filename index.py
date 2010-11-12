@@ -4,8 +4,8 @@ import uuid
 import couchdb
 from datetime import datetime
 from sys import argv
-from socket import gethostname
-from ltr import LtrDrop, LtrBoxRoot
+from ltr import LtrBoxRoot
+import os.path
 
 views = {
     'boxes': { 'map': open("views/boxes/map.js").read() },
@@ -17,149 +17,109 @@ views = {
 
    
 
-def crawl(db,workdir,box,path="/"):
-    dirqueue=["/"]
+def crawl(db,ltrboxroot,box):
+    dirqueue=[ltrboxroot]
     disapeared = []
     news = []
 
     while len(dirqueue):
-        path = dirqueue.pop(0)
-
-        diskpath = workdir+path
-        names = listdir(diskpath)
+        d = dirqueue.pop(0)
+        print "ltr: crawl ",d.diskpath
         
-        if ".ltr" in names:
-            if path != "/":
-                print "ltr: skipping ltrdir ", diskpath
-                continue
-            names.remove(".ltr")
-        
-        if ".ltrignore" in names:
-            f = open(diskpath+"/.ltrignore","r")
-            ignores = f.readlines()
-            f.close()
-            if "." in ignores:
-                continue
-            for ignore in ignores:
-                if ignore in names:
-                    names.remove(ignore)
-        
-        print "ltr: crawl ",diskpath
-        
-        results = list(db.view("ltrcrawler/by-path",key=path))
+        results = list(db.view("ltrcrawler/by-path",key=d.volpath))
         filter_this_box = lambda x: box["_id"] in x["value"]["present"] 
         results = filter(filter_this_box,results)
         known_files = dict(map(lambda x: (x["value"]["name"],x['value']),results))
-        #filter on box
         updates = []
-        for filename in names:
+        for l in d.children():
             now = {}
             meta = {}
             knownfile = False
             updated = False
-            srcname = diskpath+"/"+filename
-        
-            if path == "/":
-                volumepath = path+filename
-            else:
-                volumepath = path+"/"+filename
-
             now["present"]= [box["_id"]]
-            now["path"]= path
-            now["name"]= filename
+            now["path"]= l.path
+            now["name"]= l.name
             now["doctype"] = "node"
+            meta['ftype'] = l.ftype
+            meta['size'] = l.size
+            meta['mtime'] = l.mtime
         
-            if isfile(srcname):
-                meta['ftype'] = "file"
-            elif isdir(srcname) and not ismount(srcname):
-                meta['ftype'] = "dir" 
-            elif islink(srcname):
-                meta['ftype'] = "symlink"
-            else:
-                meta['ftype'] = "other"
-        
-            st = stat(srcname)
-            meta["mtime"] = st.st_mtime
-            meta["size"] = st.st_size
-        
-            if filename in known_files:
-                knownfile = known_files[filename]
-                print "ltr: known ",volumepath
+            if l.name in known_files:
+                knownfile = known_files[l.name]
+                print "ltr: known ",l.volpath
             else:
                 now["_id"]= uuid.uuid4().hex
                 
             if meta["ftype"] == "file" \
             and (not knownfile \
             or knownfile["meta"]["mtime"] != meta["mtime"]):
-                f = open(srcname)
-                h = hashlib.sha1()
-                print "ltr: digest ", volumepath
-                h.update(f.read())
-                meta["hash"] = h.hexdigest()
-                f.close()
-                #fixme; no memory mapping possible
-                magiccmd = "/usr/bin/file -b --mime-type -- -"
-                fd = open(srcname,'r')
-                meta["mime"] = subprocess.Popen(magiccmd, shell=True, \
-                     stdin=fd, stdout=subprocess.PIPE).communicate()[0]
-                fd.close()
+                meta["hash"] = l.gethash()
+                meta["mime"] = l.getmime()
         
             if knownfile:
-                if meta["ftype"] == "dir":
-                    test = ["ftype"]
-                elif meta["ftype"] == "file":
-                    test = ["ftype","mtime","size","hash"]
-                elif meta["ftype"] == "symlink":
-                    test = ["ftype","mtime"]
-
-                for attr in test:
+                for attr in l.features:
                     if attr in meta:
-                        if not attr in knownfile["meta"] or knownfile["meta"][attr] != meta[attr]:
+                        if not attr in knownfile["meta"] \
+                        or knownfile["meta"][attr] != meta[attr]:
                             updated=True
                             break
 
             now["meta"] = meta
         
-            if not filename in known_files:
-                print "ltr: new ", volumepath
+            if not l.name in known_files:
+                print "ltr: new ", l.volpath
                 news.append(now)
             elif updated:
-                print "ltr: changed ", volumepath
+                print "ltr: changed ", l.volpath
                 if not box["_id"] in knownfile["present"]:
-                    knownfile["present"].append(box[_id])
+                    knownfile["present"].append(box["_id"])
                 knownfile["meta"] = meta
                 updates.append(now)
         
-            if meta['ftype']=="dir":
-                dirqueue.append(volumepath)
+            if l.ftype=="dir":
+                dirqueue.append(l)
         
-            if filename in known_files:
-                del known_files[filename]
+            if l.name in known_files:
+                del known_files[l.name]
 
         #fixme: recurse into directories to delete 
         if len(known_files.keys()):
             for doc in known_files.itervalues():
                 print "ltr: disapeared ", doc["name"]
-                disapeared.append((doc["_id"],doc["_rev"],doc["meta"]["hash"]))
+                disapeared.append(doc)
         
         if len(updates):
             db.update(updates)
 
     for i,new in enumerate(news):
-        trail = filter(lambda (_id,_rev,_hash): _hash == new["meta"]["hash"], disapeared)
+        def dictcompare (a,b,ks):
+            for k in ks:
+                if not (k in a and k in b):
+                    return False
+                if a[k] != b[k]:
+                    return False
+            return True
+            
+        trail = filter(lambda d: "hash" in new["meta"] \
+                                and hash in d["meta"] \
+                                and new["meta"]==d["meta"], disapeared)
         if len(trail): 
-            disapeared.remove(trail[0])
-            (_id,_rev,_hash) = trail[0]
-            print "ltr: reappear ", new["name"]
-            news[i]["_id"] = _id
-            news[i]["_rev"] = _rev
+            old = trail[0]
+            disapeared.remove(old)
+            if len(old["present"] >1):
+                print "ltr: localmove ", new["name"]
+                continue
+            else:
+                print "ltr: reappear ", new["name"]
+                news[i]["_id"] = old["_id"]
+                news[i]["_rev"] = old["_rev"]
 
     if len(news):
         db.update(news)
 
     updates = []
-    for (_id,_rev,_hash) in disapeared:
-        doc = {"_id":_id, "_rev":_rev, "_deleted": True} 
+    for doc in disapeared:
+        doc["_deleted"] =True
         updates.append(doc)
     db.update(updates)
         
@@ -173,7 +133,7 @@ if __name__ == "__main__":
         boxid = uuid.uuid4().hex
     else:
         workdir = argv[1]
-        f = open(join(workdir,".ltr"),'r')
+        f = open(os.path.join(workdir,".ltr"),'r')
         ref = f.read().strip()
         f.close()
         (http,slashslash,serveruri,dbname,boxid) = ref.split('/',4)
@@ -188,7 +148,7 @@ if __name__ == "__main__":
         db.update([couchdb.Document(_id='_design/ltrcrawler', language='javascript', views=views)])
         box = {"_id" : boxid, "doctype":"box","usually-at":workdir, "policy":"?"}
         db.update([box])
-        f = open(join(workdir,".ltr"),'w')
+        f = open(os.path.join(workdir,".ltr"),'w')
         f.write(boxpath.strip("/")+"/"+boxid)
         f.close()
         print "Created database ", dbname
@@ -196,7 +156,7 @@ if __name__ == "__main__":
         db = server[dbname]
         box = db[boxid]
 
-    crawl(db,workdir,box)
+    crawl(db,LtrBoxRoot(workdir),box)
 
     box["synctime"] = datetime.now().ctime()
     db.update([box])

@@ -11,7 +11,10 @@ class LtrDrop:
     def __init__(self,parent,name):
         self.parent = parent
         self.name = name
-        self.diskpath = join(parent.diskpath,name)
+        self.volroot = parent.volroot
+        self.path = join(parent.path,parent.name)
+        self.volpath = join(self.path,name)
+        self.diskpath = join(self.volroot,self.volpath.strip("/"))
         if isfile(self.diskpath):
             self.ftype = "file"
             self.features = ["ftype","mtime","size","hash"]
@@ -28,7 +31,7 @@ class LtrDrop:
         self.mtime = st.st_mtime
         self.size = st.st_size
     def children(self):
-        if self.ftype != "dir":
+        if not self.isroot and self.ftype != "dir":
             return []
         if ismount(self.diskpath):
             print "ltr: skip mount ", self.diskpath
@@ -72,8 +75,12 @@ class LtrDrop:
 class LtrBoxRoot(LtrDrop):
     def __init__(self,volroot):
         self.diskpath = volroot
+        self.volroot = volroot
+        self.path="/"
+        self.volpath="/"
+        self.name=""
         self.isroot = True
-        LtrDrop.__init__(self,self,"")
+        #LtrDrop.__init__(self,self,"")
 
 class LtrFileTest(unittest.TestCase):
     tinypng ="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAA\nAABJRU5ErkJggg==\n"
@@ -118,29 +125,14 @@ class LtrFileTest(unittest.TestCase):
         self.assertEqual(a.size,self.tinypngsize)
 
     def testHash(self):
-        pngfile = filter(lambda x: x.name == self.pngfile,self.root.children())[0]
+        rootfiles = self.root.children()
+        pngfile = filter(lambda x: x.name == self.pngfile,rootfiles)[0]
         self.assertEqual(pngfile.gethash(),self.tinypngsha1sum)
 
-    def testCrawling(self):
-        dirqueue = [self.root]
-        found = []
-        while len(dirqueue):
-            d = dirqueue.pop(0)
-
-
-        self.root = LtrBoxRoot(self.tempdir)
-
-    def testMime(self):
-        a = LtrDrop(self.root,self.pngfile) 
-        self.assertEqual(a.getmime(),"image/png")
-
-    def testSize(self):
-        a = LtrDrop(self.root,self.pngfile) 
-        self.assertEqual(a.size,self.tinypngsize)
-
-    def testHash(self):
-        pngfile = filter(lambda x: x.name == self.pngfile,self.root.children())[0]
-        self.assertEqual(pngfile.gethash(),self.tinypngsha1sum)
+    def testlocation(self):
+        rootfiles = self.root.children()
+        pngfile = filter(lambda x: x.name == self.pngfile,rootfiles)[0]
+        self.assertEqual(pngfile.path,"/")
 
     def testCrawling(self):
         dirqueue = [self.root]
