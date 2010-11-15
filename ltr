@@ -19,7 +19,6 @@ if __name__ == "__main__":
         box.setPath(directory)
         box.newFromUri(LtrContext(uri))
         box.writeCookie()
-        box.crawl()
 
     if cmd == "clone":
         name = opts.pop(0).strip()

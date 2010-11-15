@@ -1,0 +1,23 @@
+ltrbox crawler: generic api to be shared between pull and index
+ltrbox crawler: unittests
+ltrbox property: --policy: ondemand/complete/skeleton
+document: pull request: {ctime, status, uri=user@host:/path}
+client: wait on _changes for pull requests
+ltr: node attribute 'missing'; missing.append(boxname) for boxname if boxname.policy == complete
+ltr: missing; yield [boxname,nest-depth,id] for node if len(node.missing)
+ltrnode property: meta.nest-depth
+path property: use parent id
+code: license headers
+database: need more abstraction
+status: recognise change in filetypes
+ltrbox property: repository (expect no user edits)
+ltrnode property: added-to-volume-time 
+ltrbox property: rootchild
+ltrbox id: human readable
+ltrnode property: pending = [boxid,..] copy file to box
+client: DB replication 
+client: status diffstat-style output
+client: couchdb conflict handling
+client: transaction logging to DB
+client: keep file history 
+client: don't delete ltrnode on last disapearance, just set present = []
