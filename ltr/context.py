@@ -1,7 +1,7 @@
 import unittest
 import couchdb
 from .space import LtrSpace
-class LtrUri:
+class LtrContext:
     dbservername = False
     dbserveruri = False
     spacename = False
@@ -11,8 +11,12 @@ class LtrUri:
     dbcursor = False
     db = False
     
-    def __init__(self,uristr):
-        pieces = uristr.split("/")
+    def __init__(self,uri=False,boxname=False):
+        if boxname:
+            self.boxname = boxname
+        if not uri:
+            return
+        pieces = uri.split("/")
         if len(pieces):
             http = pieces.pop(0)
         if len(pieces):
@@ -36,9 +40,10 @@ class LtrUri:
             self.connectDatabaseServer()
         return self.dbcursor
 
-class LtrUriTest(unittest.TestCase):
+
+class LtrContextTest(unittest.TestCase):
     def test1(self):
-        u = LtrUri("http://localhost:5984/dbname/boxname")
+        u = LtrContext("http://localhost:5984/dbname/boxname")
         self.assertEqual(u.dbserveruri,"http://localhost:5984")
         self.assertEqual(u.spaceuri,"http://localhost:5984/dbname")
         self.assertEqual(u.boxuri,"http://localhost:5984/dbname/boxname")

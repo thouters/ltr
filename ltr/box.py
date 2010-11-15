@@ -2,28 +2,33 @@ import os
 import uuid
 from .drop import LtrBoxRoot
 from .space import LtrSpace
-from .uri import LtrUri
+from .context import LtrContext
 
 class LtrBox:
     record = False
     name = False
     rootnode = False
     space = False
-    uri = False
+    context = False
+    uri=False
 
-    def fromUri(self,uri):
-        self.uri = uri
+    def __init__(self,space=False):
+        self.space = space
+
+    def fromUri(self,context):
+        self.context = context
         self.space = LtrSpace()
-        self.space.fromUri(uri)
+        self.space.fromUri(context)
         self.getRecord()
 
-    def newFromUri(self,uri):
+    def newFromUri(self,context):
         if not self.space:
             s = LtrSpace()
-            self.uri = uri
-            s.newFromUri(self.uri)
+            self.context = context
+            s.newFromUri(self.context)
             self.space = s
-        self.name = uri.boxname
+        self.name = context.boxname
+        self.uri = context.boxuri
         self.new()
 
     def new(self):
@@ -33,7 +38,7 @@ class LtrBox:
         self.space.records.update([self.record])
 
     def getRecord(self):
-        self.record = self.space.records[self.uri.boxname]
+        self.record = self.space.records[self.context.boxname]
 
     def setpath(self,path):
         self.path = path
@@ -42,7 +47,7 @@ class LtrBox:
     def loadCookie(self,path):
         self.setpath(path)
         f = open(os.path.join(self.path,".ltr"),'r')
-        self.fromUri(LtrUri(f.read().strip()))
+        self.fromUri(LtrContext(f.read().strip()))
         f.close()
 
     def writeCookie(self,path=False):
@@ -50,19 +55,20 @@ class LtrBox:
             self.setpath(path)
         #FIXME: verify fileexists
         f = open(os.path.join(self.path,".ltr"),'w')
-        f.write(self.uri.boxuri)
+        f.write(self.uri)
         f.close()
-        print "Initialised LtrDropBox ", self.path
+        print "ltr: wrote cookie for ", self.name
 
     def setName(self,name=""):
         if name=="":
-            if self.uri.boxname:
-                self.name = self.uri.boxname
+            if self.context.boxname:
+                self.name = self.context.boxname
             else:
                 self.name = uuid.uuid4().hex
         else:
             self.name = name
 
+        self.uri = self.space.getBoxUri(self.name)
 
     def crawl(self):
         dirqueue=[self.rootnode]
