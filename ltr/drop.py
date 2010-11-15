@@ -4,7 +4,6 @@ import subprocess
 from os import listdir, stat
 import unittest
 
-
 class LtrDrop:
     isroot= False
     ignoreFileName=".ltrignore"
