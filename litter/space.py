@@ -13,6 +13,7 @@ class LtrSpace:
     name = False
     records = False
     context = False
+    boxes = []
     def newFromUri(self,context):
         self.context = context
         self.name = context.spacename

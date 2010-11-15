@@ -1,8 +1,12 @@
 import os
+from os.path import isfile
 import uuid
 from .drop import LtrBoxRoot
 from .space import LtrSpace
 from .context import LtrContext
+
+class LtrCookieException(Exception):
+    pass
 
 class LtrBox:
     record = False
@@ -13,12 +17,21 @@ class LtrBox:
     uri=False
 
     def __init__(self,space=False):
+        if space:
+            self.setSpace(space)
+
+    def setSpace(self,space):
         self.space = space
+        self.space.boxes.append(self)
 
     def fromUri(self,context):
-        self.context = context
-        self.space = LtrSpace()
-        self.space.fromUri(context)
+        if not self.context:
+            self.context = context
+        if not self.space:
+            self.setSpace(LtrSpace())
+            self.space.fromUri(context)
+
+        self.name = context.boxname
         self.getRecord()
 
     def newFromUri(self,context):
@@ -26,7 +39,7 @@ class LtrBox:
             s = LtrSpace()
             self.context = context
             s.newFromUri(self.context)
-            self.space = s
+            self.setSpace(s)
         self.name = context.boxname
         self.uri = context.boxuri
         self.new()
@@ -40,19 +53,22 @@ class LtrBox:
     def getRecord(self):
         self.record = self.space.records[self.context.boxname]
 
-    def setpath(self,path):
+    def setPath(self,path):
         self.path = path
         self.rootnode = LtrBoxRoot(self.path)
 
     def loadCookie(self,path):
-        self.setpath(path)
-        f = open(os.path.join(self.path,".ltr"),'r')
+        self.setPath(path)
+        cookiefile = os.path.join(self.path,".ltr")
+        if not isfile(cookiefile):
+            raise LtrCookieException("directory is not a litter dropbox: %s"%self.path)
+        f = open(cookiefile,'r')
         self.fromUri(LtrContext(f.read().strip()))
         f.close()
 
     def writeCookie(self,path=False):
         if path:
-            self.setpath(path)
+            self.setPath(path)
         #FIXME: verify fileexists
         f = open(os.path.join(self.path,".ltr"),'w')
         f.write(self.uri)
@@ -69,6 +85,9 @@ class LtrBox:
             self.name = name
 
         self.uri = self.space.getBoxUri(self.name)
+
+    def pull(self):
+        print self.space.boxes
 
     def crawl(self):
         dirqueue=[self.rootnode]
