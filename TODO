@@ -1,3 +1,15 @@
+
+ltr: "lsforeign"
+ltr: "stat file"
+ltr: "checkout file"
+ltr: "diff . boxname" command
+ltr: "ping boxname" command (attempt to access dropbox and set it as origin) 
+
+.ltr in yaml; list of remote repositories, git style
+    uri: http://blabla
+    remotes:
+        origin: thomas@otherhost:/path-to-folder
+        backup-1: /mnt/backupdisk
 ltrbox crawler: generic api to be shared between pull and index
 ltrbox crawler: unittests
 ltrbox property: --policy: ondemand/complete/skeleton
