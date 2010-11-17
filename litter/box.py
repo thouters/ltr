@@ -11,10 +11,15 @@ class LtrCookieException(Exception):
 class LtrBox:
     record = False
     name = False
-    rootnode = False
+    dropbox = False
     space = False
     context = False
     uri=False
+    policy = "complete" # "skeleton" "ondemand" 
+
+    def __repr__(self):
+        s = "<ltrbox %s/%s >" % (self.space.name,self.name)
+        return s
 
     def __init__(self,space=False):
         if space:
@@ -48,6 +53,9 @@ class LtrBox:
         self.record = {}
         self.record["_id"] = self.name
         self.record["doctype"] = "box"
+        self.record["policy"] = self.policy
+        self.record["rootnode"] = "ROOT"
+        print "ltr: new box to database ", self
         self.space.records.update([self.record])
 
     def getRecord(self):
@@ -55,7 +63,7 @@ class LtrBox:
 
     def setPath(self,path):
         self.path = path
-        self.rootnode = LtrBoxRoot(self.path)
+        self.dropbox = LtrBoxRoot(self.path)
 
     def loadCookie(self,path):
         self.setPath(path)
@@ -86,84 +94,99 @@ class LtrBox:
 
         self.uri = self.space.getBoxUri(self.name)
 
-    def pull(self):
-        print self.space.boxes
+    def pull(self,srcbox):
+        print "ltr: pull ", srcbox.path
 
-    def crawl(self):
-        dirqueue=[self.rootnode]
-        disapeared = []
-        news = []
-    
+        #self.record.rootnode._id
+        dirqueue=[self.dropbox]
+        minus = []
+        plus = []
         while len(dirqueue):
             d = dirqueue.pop(0)
             print "ltr: crawl ",d.diskpath
+
+
+    def crawl(self):
+        dirqueue=[(self.dropbox,self.space.records[self.record["rootnode"]])]
+        minus = []
+        plus = []
+    
+        while len(dirqueue):
+            (parent,parentdoc) = dirqueue.pop(0)
+            print "ltr: crawl ",parent.diskpath
             
-            results = list(self.space.records.view("ltrcrawler/by-path",key=d.volpath))
+            global_files = list(self.space.records.view("ltrcrawler/by-parent",key=parentdoc["_id"]))
             filter_this_box = lambda x: self.record["_id"] in x["value"]["present"] 
-            results = filter(filter_this_box,results)
-            known_files = dict(map(lambda x: (x["value"]["name"],x['value']),results))
+            local_files = filter(filter_this_box,global_files)
+            local_files = dict(map(lambda x: (x["value"]["name"],x['value']),local_files))
             updates = []
-            for l in d.children():
+            for l in parent.children():
                 now = {}
                 meta = {}
-                knownfile = False
-                updated = False
+                file_is_known = False
+                file_changed = False
+                now["parent"]= parentdoc["_id"]
                 now["present"]= [self.record["_id"]]
-                now["path"]= l.path
                 now["name"]= l.name
                 now["doctype"] = "node"
                 meta['ftype'] = l.ftype
                 meta['size'] = l.size
                 meta['mtime'] = l.mtime
+                if l.ftype == "dir":
+                    meta["path"]= l.volpath
             
-                if l.name in known_files:
-                    knownfile = known_files[l.name]
+                if l.name in local_files:
+                    file_is_known = local_files[l.name]
                     print "ltr: known ",l.volpath
                 else:
                     now["_id"]= uuid.uuid4().hex
                     
                 if meta["ftype"] == "file" \
-                and (not knownfile \
-                or knownfile["meta"]["mtime"] != meta["mtime"]):
+                and (not file_is_known \
+                or file_is_known["meta"]["mtime"] != meta["mtime"]):
                     meta["hash"] = l.gethash()
                     meta["mime"] = l.getmime()
             
-                if knownfile:
+                if file_is_known:
                     for attr in l.features:
                         if attr in meta:
-                            if not attr in knownfile["meta"] \
-                            or knownfile["meta"][attr] != meta[attr]:
-                                updated=True
+                            if not attr in file_is_known["meta"] \
+                            or file_is_known["meta"][attr] != meta[attr]:
+                                file_changed=True
                                 break
     
                 now["meta"] = meta
             
-                if not l.name in known_files:
+                if not l.name in local_files:
                     print "ltr: new ", l.volpath
-                    news.append(now)
-                elif updated:
+                    plus.append(now)
+                    doc = now
+                elif file_changed:
                     print "ltr: changed ", l.volpath
-                    if not self.record["_id"] in knownfile["present"]:
-                        knownfile["present"].append(self.record["_id"])
-                    knownfile["meta"] = meta
+                    if not self.record["_id"] in file_is_known["present"]:
+                        file_is_known["present"].append(self.record["_id"])
+                    file_is_known["meta"] = meta
                     updates.append(now)
+                    doc=now
+                else:
+                    doc = file_is_known
             
                 if l.ftype=="dir":
-                    dirqueue.append(l)
+                    dirqueue.append((l,doc))
             
-                if l.name in known_files:
-                    del known_files[l.name]
+                if l.name in local_files:
+                    del local_files[l.name]
     
             #fixme: recurse into directories to delete 
-            if len(known_files.keys()):
-                for doc in known_files.itervalues():
-                    print "ltr: disapeared ", doc["name"]
-                    disapeared.append(doc)
+            if len(local_files.keys()):
+                for doc in local_files.itervalues():
+                    print "ltr: minus ", doc["name"]
+                    minus.append(doc)
             
             if len(updates):
                 self.space.records.update(updates)
     
-        for i,new in enumerate(news):
+        for i,new in enumerate(plus):
             def dictcompare (a,b,ks):
                 for k in ks:
                     if not (k in a and k in b):
@@ -174,23 +197,23 @@ class LtrBox:
                 
             trail = filter(lambda d: "hash" in new["meta"] \
                                     and hash in d["meta"] \
-                                    and new["meta"]==d["meta"], disapeared)
+                                    and new["meta"]==d["meta"], minus)
             if len(trail): 
                 old = trail[0]
-                disapeared.remove(old)
+                minus.remove(old)
                 if len(old["present"] >1):
                     print "ltr: localmove ", new["name"]
                     continue
                 else:
                     print "ltr: reappear ", new["name"]
-                    news[i]["_id"] = old["_id"]
-                    news[i]["_rev"] = old["_rev"]
+                    plus[i]["_id"] = old["_id"]
+                    plus[i]["_rev"] = old["_rev"]
     
-        if len(news):
-            self.space.records.update(news)
+        if len(plus):
+            self.space.records.update(plus)
     
         updates = []
-        for doc in disapeared:
+        for doc in minus:
             doc["_deleted"] =True
             updates.append(doc)
         self.space.records.update(updates)

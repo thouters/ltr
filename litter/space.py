@@ -2,9 +2,10 @@ import couchdb
 
 views = {
     'boxes': { 'map': "function(doc) { if (doc.doctype == \"box\") emit(doc._id,doc); }"},
-    'hashes': { 'map': "function(doc) { if (doc.doctype == \"node\" && doc.meta.hash) emit(doc.meta.hash, doc); }" },
-    'by-path': { 'map': "function(doc) { if (doc.doctype == \"node\") emit(doc.path, doc); }"},
-    'dirs': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.ftype==\"dir\") emit(doc.path+\"/\"+doc.name, doc); }" },
+    'by-hash': { 'map': "function(doc) { if (doc.doctype == \"node\" && doc.meta.hash) emit(doc.meta.hash, doc); }" },
+    'by-parent': { 'map': "function(doc) { if (doc.doctype == \"node\") emit(doc.parent, doc); }"},
+    'tree': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.meta.ftype==\"dir\") emit(doc.meta.path, doc); }" },
+    'dirs': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.meta.ftype==\"dir\") emit(doc); }" },
 }
 
 
@@ -24,7 +25,9 @@ class LtrSpace:
         print "ltr: create database ", self.name
         cursor.create(self.name)
         print "ltr: push design docs ", self.name
+        self.records = self.context.getCursor()[self.name]
         self.records.update([couchdb.Document(_id='_design/ltrcrawler', language='javascript', views=views)])
+        self.records.update([{"_id":"ROOT"}])
         self.fromUri(context)
 
     def fromUri(self,context):

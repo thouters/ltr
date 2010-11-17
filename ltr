@@ -31,6 +31,7 @@ if __name__ == "__main__":
         dstbox = LtrBox(srcbox.space)
         dstbox.setPath(dst)
         dstbox.setName(name)
+        dstbox.new()
         dstbox.writeCookie()
 
     if cmd == "status":
@@ -51,6 +52,6 @@ if __name__ == "__main__":
         srcbox = LtrBox(dstbox.space)
         srcbox.loadCookie(src)
 
-        dstbox.pull()
+        dstbox.pull(srcbox)
 
     print "ltr: done"
