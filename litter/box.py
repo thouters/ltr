@@ -1,7 +1,7 @@
 import os
 from os.path import isfile
 import uuid
-from .drop import LtrBoxRoot
+from .drop import LtrDrop
 from .space import LtrSpace
 from .context import LtrContext
 
@@ -9,19 +9,21 @@ class LtrCookieException(Exception):
     pass
 
 class LtrBox:
-    record = False
-    name = False
-    dropbox = False
-    space = False
-    context = False
-    uri=False
-    policy = "complete" # "skeleton" "ondemand" 
 
     def __repr__(self):
         s = "<ltrbox %s/%s >" % (self.space.name,self.name)
         return s
 
     def __init__(self,space=False):
+        self.record = False
+        self.name = False
+        self.dropbox = False
+        self.space = False
+        self.context = False
+        self.uri=False
+        self.path = False
+        self.policy = "complete" # "skeleton" "ondemand" 
+
         if space:
             self.setSpace(space)
 
@@ -63,16 +65,17 @@ class LtrBox:
 
     def setPath(self,path):
         self.path = path
-        self.dropbox = LtrBoxRoot(self.path)
+        self.dropbox = LtrDrop().fromDisk(path)
 
-    def loadCookie(self,path):
-        self.setPath(path)
-        cookiefile = os.path.join(self.path,".ltr")
+    def fromCookie(self,path):
+        cookiefile = os.path.join(path,".ltr")
         if not isfile(cookiefile):
             raise LtrCookieException("directory is not a litter dropbox: %s"%self.path)
         f = open(cookiefile,'r')
         self.fromUri(LtrContext(f.read().strip()))
+        self.setPath(path)
         f.close()
+        return self
 
     def writeCookie(self,path=False):
         if path:
@@ -97,126 +100,110 @@ class LtrBox:
     def pull(self,srcbox):
         print "ltr: pull ", srcbox.path
 
-        #self.record.rootnode._id
+    def crawl(self,commit=True):
         dirqueue=[self.dropbox]
         minus = []
         plus = []
-        while len(dirqueue):
-            d = dirqueue.pop(0)
-            print "ltr: crawl ",d.diskpath
+        updates = []
 
-
-    def crawl(self):
-        dirqueue=[(self.dropbox,self.space.records[self.record["rootnode"]])]
-        minus = []
-        plus = []
-    
         while len(dirqueue):
-            (parent,parentdoc) = dirqueue.pop(0)
-            print "ltr: crawl ",parent.diskpath
+            parent = dirqueue.pop(0)
+            #print "ltr: crawl ",parent.diskpath
             
-            global_files = list(self.space.records.view("ltrcrawler/by-parent",key=parentdoc["_id"]))
+            global_files = list(self.space.records.view("ltrcrawler/by-parent",key=parent.record["_id"]))
             filter_this_box = lambda x: self.record["_id"] in x["value"]["present"] 
             local_files = filter(filter_this_box,global_files)
-            local_files = dict(map(lambda x: (x["value"]["name"],x['value']),local_files))
-            updates = []
-            for l in parent.children():
-                now = {}
-                meta = {}
+            def mkdrop(doc):
+                doc = doc["value"]
+                return (doc["name"],LtrDrop().fromDoc(parent,doc))
+
+            local_files = dict(map(mkdrop,local_files))
+            for drop in parent.children():
                 file_is_known = False
                 file_changed = False
-                now["parent"]= parentdoc["_id"]
-                now["present"]= [self.record["_id"]]
-                now["name"]= l.name
-                now["doctype"] = "node"
-                meta['ftype'] = l.ftype
-                meta['size'] = l.size
-                meta['mtime'] = l.mtime
-                if l.ftype == "dir":
-                    meta["path"]= l.volpath
+                drop.record["parent"]= parent.record["_id"]
+                drop.record["present"]= [self.record["_id"]]
+                drop.record["name"]= drop.name
+                drop.record["doctype"] = "node"
+                drop.record["meta"] = {}
+                drop.record["meta"]['ftype'] = drop.ftype
+                drop.record["meta"]['size'] = drop.size
+                drop.record["meta"]['mtime'] = drop.mtime
+                if drop.ftype == "dir":
+                    drop.record["meta"]["path"]= drop.volpath
             
-                if l.name in local_files:
-                    file_is_known = local_files[l.name]
-                    print "ltr: known ",l.volpath
+                if drop.name in local_files:
+                    file_is_known = local_files[drop.name]
+                    #print "ltr: known ",drop.volpath
                 else:
-                    now["_id"]= uuid.uuid4().hex
-                    
-                if meta["ftype"] == "file" \
+                    drop.record["_id"]= uuid.uuid4().hex
+
+                if drop.record["meta"]["ftype"] == "file" \
                 and (not file_is_known \
-                or file_is_known["meta"]["mtime"] != meta["mtime"]):
-                    meta["hash"] = l.gethash()
-                    meta["mime"] = l.getmime()
+                or file_is_known.record["meta"]["mtime"] != drop.record["meta"]["mtime"]):
+                    if commit:
+                        drop.record["meta"]["hash"] = drop.gethash()
+                        drop.record["meta"]["mime"] = drop.getmime()
             
                 if file_is_known:
-                    for attr in l.features:
-                        if attr in meta:
-                            if not attr in file_is_known["meta"] \
-                            or file_is_known["meta"][attr] != meta[attr]:
+                    for attr in drop.features:
+                        if attr in drop.record["meta"]:
+                            if not attr in file_is_known.record["meta"] \
+                            or file_is_known.record["meta"][attr] != drop.record["meta"][attr]:
                                 file_changed=True
                                 break
     
-                now["meta"] = meta
             
-                if not l.name in local_files:
-                    print "ltr: new ", l.volpath
-                    plus.append(now)
-                    doc = now
+                if not drop.name in local_files:
+                    print "N", drop.volpath
+                    plus.append(drop)
                 elif file_changed:
-                    print "ltr: changed ", l.volpath
-                    if not self.record["_id"] in file_is_known["present"]:
-                        file_is_known["present"].append(self.record["_id"])
-                    file_is_known["meta"] = meta
-                    updates.append(now)
-                    doc=now
+                    print "M", drop.volpath
+                    if not self.record["_id"] in file_is_known.record["present"]:
+                        file_is_known.record["present"].append(self.record["_id"])
+                    file_is_known.record["meta"] = drop.record["meta"]
+                    updates.append(drop)
                 else:
-                    doc = file_is_known
+                    drop.record = file_is_known.record
             
-                if l.ftype=="dir":
-                    dirqueue.append((l,doc))
+                if drop.ftype=="dir":
+                    dirqueue.append(drop)
             
-                if l.name in local_files:
-                    del local_files[l.name]
+                if drop.name in local_files:
+                    del local_files[drop.name]
     
             #fixme: recurse into directories to delete 
             if len(local_files.keys()):
-                for doc in local_files.itervalues():
-                    print "ltr: minus ", doc["name"]
-                    minus.append(doc)
+                for drop in local_files.itervalues():
+                    minus.append(drop)
             
-            if len(updates):
-                self.space.records.update(updates)
     
-        for i,new in enumerate(plus):
-            def dictcompare (a,b,ks):
-                for k in ks:
-                    if not (k in a and k in b):
-                        return False
-                    if a[k] != b[k]:
-                        return False
-                return True
-                
-            trail = filter(lambda d: "hash" in new["meta"] \
+        for i,newdrop in enumerate(plus):
+            #find new old files in list of removed files
+            trail = filter(lambda d: "hash" in newdrop.record["meta"] \
                                     and hash in d["meta"] \
-                                    and new["meta"]==d["meta"], minus)
+                                    and newdrop.record["meta"]==d["meta"], minus)
             if len(trail): 
                 old = trail[0]
                 minus.remove(old)
                 if len(old["present"] >1):
-                    print "ltr: localmove ", new["name"]
+                    print "R %s -> %s" %(old["name"],newdrop.record["name"])
                     continue
                 else:
-                    print "ltr: reappear ", new["name"]
-                    plus[i]["_id"] = old["_id"]
-                    plus[i]["_rev"] = old["_rev"]
+                    print "R %s -> %s" %(old["name"],newdrop.record["name"])
+                    plus[i].record["_id"] = old["_id"]
+                    plus[i].record["_rev"] = old["_rev"]
     
-        if len(plus):
-            self.space.records.update(plus)
+        updates += plus
     
-        updates = []
         for doc in minus:
             doc["_deleted"] =True
             updates.append(doc)
-        self.space.records.update(updates)
-        print "ltr: compact database"
-        self.space.records.compact()
+
+        if commit:
+            print "." * len(updates)
+            updates = map(lambda x: x.record,updates)
+            self.space.records.update(updates)
+            #print "ltr: compact database"
+            self.space.records.compact()
      

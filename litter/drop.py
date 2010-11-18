@@ -3,17 +3,29 @@ import hashlib
 import subprocess
 from os import listdir, stat
 import unittest
+#from box import LtrBox
 
 class LtrDrop:
-    isroot= False
-    ignoreFileName=".ltrignore"
-    def __init__(self,parent,name):
-        self.parent = parent
-        self.name = name
-        self.volroot = parent.volroot
-        self.path = join(parent.path,parent.name)
-        self.volpath = join(self.path,name)
-        self.diskpath = join(self.volroot,self.volpath.strip("/"))
+    def __init__(self):
+        self.record = {}
+        self.ignoreFileName=".ltrignore"
+        pass
+    def fromDisk(self,name,parent=False):
+        if parent:
+            self.parent = parent
+            self.volroot = self.parent.volroot
+            self.name = name
+            self.path = join(self.parent.path,self.parent.name)
+            self.volpath = join(self.path,name)
+            self.diskpath = join(self.volroot,self.volpath.strip("/"))
+        else:
+            self.diskpath = name
+            self.volroot = name
+            self.path="/"
+            self.volpath="/"
+            self.name=""
+            self.record["_id"] = "ROOT"
+   
         if isfile(self.diskpath):
             self.ftype = "file"
             self.features = ["ftype","mtime","size","hash"]
@@ -29,15 +41,27 @@ class LtrDrop:
         st = stat(self.diskpath)
         self.mtime = st.st_mtime
         self.size = st.st_size
+        return self
+
+    def fromDoc(self,parent,doc):
+        self.parent = parent
+        self.record = doc
+        return self
+    def fromBox(self,box):
+        if box.space:
+            self.record = box.space.records[box.record["rootnode"]]
+        self.fromDisk(box.path) 
+        return self
+
     def children(self):
-        if not self.isroot and self.ftype != "dir":
+        if self.ftype != "dir":
             return []
         if ismount(self.diskpath):
             print "ltr: skip mount ", self.diskpath
             return []
         names = listdir(self.diskpath)
         if ".ltr" in names:
-            if not self.isroot:
+            if self.volpath != "/":
                 print "ltr: skip ltrbox ", self.diskpath
             names.remove(".ltr")
         
@@ -51,12 +75,12 @@ class LtrDrop:
             for ignore in ignores:
                 if ignore in names:
                     names.remove(ignore)
-        return map(lambda n: LtrDrop(self,n),names)
+        return map(lambda n: LtrDrop().fromDisk(n,self),names)
 
     def gethash(self):
         f = open(self.diskpath)
         h = hashlib.sha1()
-        print "ltr: digest ", self.diskpath
+        #print "ltr: digest ", self.diskpath
         h.update(f.read())
         h = h.hexdigest()
         f.close()
@@ -71,15 +95,6 @@ class LtrDrop:
         fd.close()
         return m.strip()
 
-class LtrBoxRoot(LtrDrop):
-    def __init__(self,volroot):
-        self.diskpath = volroot
-        self.volroot = volroot
-        self.path="/"
-        self.volpath="/"
-        self.name=""
-        self.isroot = True
-        #LtrDrop.__init__(self,self,"")
 
 class LtrFileTest(unittest.TestCase):
     tinypng ="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAA\nAABJRU5ErkJggg==\n"
@@ -112,37 +127,36 @@ class LtrFileTest(unittest.TestCase):
         f.write("xyz")
         f.close()
 
-
-        self.root = LtrBoxRoot(self.tempdir)
+        self.dropbox = LtrDrop().fromDisk(self.tempdir)
 
     def testMime(self):
-        a = LtrDrop(self.root,self.pngfile) 
+        a = LtrDrop().fromDisk(self.pngfile,self.dropbox) 
         self.assertEqual(a.getmime(),"image/png")
 
     def testSize(self):
-        a = LtrDrop(self.root,self.pngfile) 
+        a = LtrDrop().fromDisk(self.pngfile,self.dropbox) 
         self.assertEqual(a.size,self.tinypngsize)
 
     def testHash(self):
-        rootfiles = self.root.children()
+        rootfiles = self.dropbox.children()
         pngfile = filter(lambda x: x.name == self.pngfile,rootfiles)[0]
         self.assertEqual(pngfile.gethash(),self.tinypngsha1sum)
 
     def testlocation(self):
-        rootfiles = self.root.children()
+        rootfiles = self.dropbox.children()
         pngfile = filter(lambda x: x.name == self.pngfile,rootfiles)[0]
         self.assertEqual(pngfile.path,"/")
 
     def testCrawling(self):
-        dirqueue = [self.root]
+        dirqueue = [self.dropbox]
         found = []
         while len(dirqueue):
             d = dirqueue.pop(0)
             self.assertTrue(len(d.children())>0)
-            for ltrfile in d.children():
-                found.append(ltrfile)
-                if len(ltrfile.children()):
-                    dirqueue.append(ltrfile)
+            for drop in d.children():
+                found.append(drop)
+                if len(drop.children()):
+                    dirqueue.append(drop)
 
         filenames = map(lambda x: x.name,found)
         self.assertTrue(self.pngfile in filenames)
@@ -150,7 +164,7 @@ class LtrFileTest(unittest.TestCase):
         self.assertTrue(self.childdir1 in filenames)
 
     def testIgnoreFile(self):
-        matches = filter(lambda x: x.name == self.ignoredfile,self.root.children())
+        matches = filter(lambda x: x.name == self.ignoredfile,self.dropbox.children())
         self.assertFalse(len(matches)>0)
 
 

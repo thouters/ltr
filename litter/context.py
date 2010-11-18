@@ -32,7 +32,7 @@ class LtrContext:
             self.boxuri = self.spaceuri+self.boxname
 
     def connectDatabaseServer(self):
-        print "ltr: connect", self.dbserveruri
+#        print "ltr: connect", self.dbserveruri
         self.dbcursor = couchdb.Server(self.dbserveruri)
 
     def getCursor(self):

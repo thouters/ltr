@@ -11,10 +11,12 @@ views = {
 
 
 class LtrSpace:
-    name = False
-    records = False
-    context = False
-    boxes = []
+    def __init__(self):
+        self.name = False
+        self.records = False
+        self.context = False
+        self.boxes = []
+
     def newFromUri(self,context):
         self.context = context
         self.name = context.spacename
