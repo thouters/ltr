@@ -3,13 +3,14 @@ import hashlib
 import subprocess
 from os import listdir, stat
 import unittest
+from uri import LtrUri
 #from box import LtrBox
 
-class LtrDrop:
+class LtrDrop(LtrUri):
     def __init__(self):
         self.record = {}
         self.ignoreFileName=".ltrignore"
-        pass
+
     def fromDisk(self,name,parent=False):
         if parent:
             self.parent = parent
@@ -104,7 +105,7 @@ class LtrFileTest(unittest.TestCase):
         import tempfile, base64, os.path, os
         self.tempdir = tempfile.mkdtemp()
         self.pngfile = "pngfile"
-        self.ltrignorefile = LtrDrop.ignoreFileName
+        self.ltrignorefile = LtrDrop().ignoreFileName
         self.ignoredfile = "PleaseIgnoreMe"
 
         f = open(os.path.join(self.tempdir,self.pngfile),"w")

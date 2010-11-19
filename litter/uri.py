@@ -1,21 +1,15 @@
 import unittest
-import couchdb
-from .space import LtrSpace
-class LtrContext:
-    dbservername = False
-    dbserveruri = False
-    spacename = False
-    spaceuri = False
-    boxname = False
-    boxuri = False
-    dbcursor = False
-    db = False
-    
-    def __init__(self,uri=False,boxname=False):
-        if boxname:
-            self.boxname = boxname
-        if not uri:
-            return
+
+class LtrUri:
+    def __init__(self):
+        self.dbservername = False
+        self.dbserveruri = False
+        self.spacename = False
+        self.spaceuri = False
+        self.boxname = False
+        self.boxuri = False
+
+    def setUri(self,uri):
         pieces = uri.split("/")
         if len(pieces):
             http = pieces.pop(0)
@@ -31,21 +25,14 @@ class LtrContext:
             self.boxname = pieces.pop(0)
             self.boxuri = self.spaceuri+self.boxname
 
-    def connectDatabaseServer(self):
-#        print "ltr: connect", self.dbserveruri
-        self.dbcursor = couchdb.Server(self.dbserveruri)
-
-    def getCursor(self):
-        if not self.dbcursor:
-            self.connectDatabaseServer()
-        return self.dbcursor
+        return self
 
 
 class LtrContextTest(unittest.TestCase):
     def test1(self):
-        u = LtrContext("http://localhost:5984/dbname/boxname")
-        self.assertEqual(u.dbserveruri,"http://localhost:5984")
-        self.assertEqual(u.spaceuri,"http://localhost:5984/dbname")
+        u = LtrUri().setUri("http://localhost:5984/dbname/boxname")
+        self.assertEqual(u.dbserveruri,"http://localhost:5984/")
+        self.assertEqual(u.spaceuri,"http://localhost:5984/dbname/")
         self.assertEqual(u.boxuri,"http://localhost:5984/dbname/boxname")
         self.assertEqual(u.dbservername,"localhost:5984")
         self.assertEqual(u.spacename,"dbname")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from sys import argv
-from litter import LtrBox,LtrContext
+from litter import LtrBox
 import os
 
 if __name__ == "__main__":
@@ -16,8 +16,8 @@ if __name__ == "__main__":
         uri = opts.pop(0).strip()
         directory = opts.pop(0)
         box = LtrBox()
+        box.createfromUri(uri)
         box.setPath(directory)
-        box.newFromUri(LtrContext(uri))
         box.writeCookie()
 
     if cmd == "clone":
@@ -30,16 +30,12 @@ if __name__ == "__main__":
         dstbox = LtrBox(srcbox.space)
         dstbox.setPath(dst)
         dstbox.setName(name)
-        dstbox.new()
+        dstbox.create()
         dstbox.writeCookie()
 
     if cmd == "commit":
         #crawl, show diff of changes
-        if len(opts):
-            directory = opts.pop(0)
-        else:
-            directory = os.getcwd()
-        box = LtrBox().fromCookie(directory)
+        box = LtrBox().fromCookie(os.getcwd())
         box.crawl(commit=True)
 
     if cmd == "diff":
@@ -47,12 +43,7 @@ if __name__ == "__main__":
 
     if cmd == "status":
         #crawl, show diff of changes
-        if len(opts):
-            directory = opts.pop(0)
-        else:
-            directory = os.getcwd()
-
-        box = LtrBox().fromCookie(directory)
+        box = LtrBox().fromCookie(os.getcwd())
         box.crawl(commit=False)
 
     if cmd == "pull":
@@ -63,4 +54,15 @@ if __name__ == "__main__":
         srcbox = LtrBox(dstbox.space).fromCookie(src)
 
         dstbox.pull(srcbox)
+
+    if cmd == "ls":
+        thisbox = LtrBox().fromCookie(os.getcwd())
+        if len(opts):
+            x  = opts.pop(0)
+            boxid = x[1:]
+            box = thisbox.space.getBox(boxid)
+        else:
+            box = thisbox
+ 
+        box.lsIndex()
 

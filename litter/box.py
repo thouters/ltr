@@ -1,14 +1,14 @@
 import os
 from os.path import isfile
 import uuid
-from .drop import LtrDrop
-from .space import LtrSpace
-from .context import LtrContext
+from drop import LtrDrop
+from space import LtrSpace
+from uri import LtrUri
 
 class LtrCookieException(Exception):
     pass
 
-class LtrBox:
+class LtrBox(LtrUri):
 
     def __repr__(self):
         s = "<ltrbox %s/%s >" % (self.space.name,self.name)
@@ -19,39 +19,39 @@ class LtrBox:
         self.name = False
         self.dropbox = False
         self.space = False
-        self.context = False
         self.uri=False
         self.path = False
         self.policy = "complete" # "skeleton" "ondemand" 
+        self.cwd = False #set drop in loadcookie()
 
         if space:
             self.setSpace(space)
 
     def setSpace(self,space):
         self.space = space
-        self.space.boxes.append(self)
 
-    def fromUri(self,context):
-        if not self.context:
-            self.context = context
+    def setUri(self,uri):
+        LtrUri.setUri(self,uri)
+        self.name = self.boxname
         if not self.space:
-            self.setSpace(LtrSpace())
-            self.space.fromUri(context)
+            self.setSpace(LtrSpace().setUri(uri))
 
-        self.name = context.boxname
         self.getRecord()
+        return self
 
-    def newFromUri(self,context):
+    def getUri(self):
+        return "/".join(self.dbserveruri.strip("/"),self.spacename)
+
+    def createfromUri(self,uri):
         if not self.space:
-            s = LtrSpace()
-            self.context = context
-            s.newFromUri(self.context)
+            s = LtrSpace().createfromUri(uri)
             self.setSpace(s)
-        self.name = context.boxname
-        self.uri = context.boxuri
-        self.new()
+        LtrUri.setUri(self,uri)
+        self.name = self.boxname
+        self.create()
+        return self
 
-    def new(self):
+    def create(self):
         self.record = {}
         self.record["_id"] = self.name
         self.record["doctype"] = "box"
@@ -61,19 +61,27 @@ class LtrBox:
         self.space.records.update([self.record])
 
     def getRecord(self):
-        self.record = self.space.records[self.context.boxname]
+        self.record = self.space.records[self.boxname]
 
     def setPath(self,path):
         self.path = path
         self.dropbox = LtrDrop().fromDisk(path)
 
     def fromCookie(self,path):
-        cookiefile = os.path.join(path,".ltr")
-        if not isfile(cookiefile):
-            raise LtrCookieException("directory is not a litter dropbox: %s"%self.path)
-        f = open(cookiefile,'r')
-        self.fromUri(LtrContext(f.read().strip()))
-        self.setPath(path)
+        #find cookie
+        testpath = path 
+        while len(testpath)>1:
+            testfile = os.path.join(testpath,".ltr") 
+            if isfile(testfile):
+                break
+            testpath = os.path.dirname(testpath)
+        if len(testpath) == 1:
+            raise LtrCookieException("directory not in litter dropbox: %s"%path)
+
+        f = open(testfile,'r')
+        c = f.read().strip()
+        self.setUri(c)
+        self.setPath(testpath)
         f.close()
         return self
 
@@ -82,23 +90,26 @@ class LtrBox:
             self.setPath(path)
         #FIXME: verify fileexists
         f = open(os.path.join(self.path,".ltr"),'w')
-        f.write(self.uri)
+        f.write(self.boxuri)
         f.close()
         print "ltr: wrote cookie for ", self.name
 
     def setName(self,name=""):
         if name=="":
-            if self.context.boxname:
-                self.name = self.context.boxname
+            if self.boxname:
+                self.name = self.boxname
             else:
                 self.name = uuid.uuid4().hex
         else:
             self.name = name
 
-        self.uri = self.space.getBoxUri(self.name)
+        self.boxuri = self.space.getBoxUri(self.name)
 
     def pull(self,srcbox):
         print "ltr: pull ", srcbox.path
+
+    def lsIndex(self):
+        pass
 
     def crawl(self,commit=True):
         dirqueue=[self.dropbox]
@@ -206,4 +217,9 @@ class LtrBox:
             self.space.records.update(updates)
             #print "ltr: compact database"
             self.space.records.compact()
+
+        if len(updates):
+            return True
+        else:
+            return False
      
