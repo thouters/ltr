@@ -12,20 +12,27 @@ class LtrUri:
     def setUri(self,uri):
         pieces = uri.split("/")
         if len(pieces):
-            http = pieces.pop(0)
+            self.http = pieces.pop(0)
         if len(pieces):
             slashslash = pieces.pop(0)
         if len(pieces):
-            self.dbservername = pieces.pop(0)
-            self.dbserveruri = http + "//" + self.dbservername +"/"
+            self.setDbservername(pieces.pop(0))
         if len(pieces):
-            self.spacename = pieces.pop(0)
-            self.spaceuri = self.dbserveruri+self.spacename+"/"
+            self.setSpacename(pieces.pop(0))
         if len(pieces):
-            self.boxname = pieces.pop(0)
-            self.boxuri = self.spaceuri+self.boxname
+            self.setBoxname(pieces.pop(0))
 
         return self
+
+    def setDbservername(self,dbservername):
+        self.dbservername = dbservername
+        self.dbserveruri = self.http + "//" + self.dbservername +"/"
+    def setSpacename(self,spacename):
+        self.spacename = spacename
+        self.spaceuri = self.dbserveruri+self.spacename+"/"
+    def setBoxname(self,boxname):
+        self.boxname = boxname
+        self.boxuri = self.spaceuri+self.boxname
 
 
 class LtrContextTest(unittest.TestCase):

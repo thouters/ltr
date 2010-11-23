@@ -58,11 +58,15 @@ if __name__ == "__main__":
     if cmd == "ls":
         thisbox = LtrBox().fromCookie(os.getcwd())
         if len(opts):
-            x  = opts.pop(0)
-            boxid = x[1:]
-            box = thisbox.space.getBox(boxid)
+            boxid = opts.pop(0)
+            box = LtrBox(thisbox.space).setUri(thisbox.space.getBoxUri(boxid))
         else:
             box = thisbox
  
-        box.lsIndex()
+        if box.cwd:
+            f = box.cwd
+        else:
+            f = box.dropbox
+
+        print "\n".join(map(lambda x: x.name, f.getIndex(box)))
 

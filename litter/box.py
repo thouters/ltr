@@ -37,6 +37,8 @@ class LtrBox(LtrUri):
             self.setSpace(LtrSpace().setUri(uri))
 
         self.getRecord()
+        self.dropbox = LtrDrop()
+        self.dropbox.record["_id"] = "ROOT"
         return self
 
     def getUri(self):
@@ -108,8 +110,6 @@ class LtrBox(LtrUri):
     def pull(self,srcbox):
         print "ltr: pull ", srcbox.path
 
-    def lsIndex(self):
-        pass
 
     def crawl(self,commit=True):
         dirqueue=[self.dropbox]
@@ -121,14 +121,7 @@ class LtrBox(LtrUri):
             parent = dirqueue.pop(0)
             #print "ltr: crawl ",parent.diskpath
             
-            global_files = list(self.space.records.view("ltrcrawler/by-parent",key=parent.record["_id"]))
-            filter_this_box = lambda x: self.record["_id"] in x["value"]["present"] 
-            local_files = filter(filter_this_box,global_files)
-            def mkdrop(doc):
-                doc = doc["value"]
-                return (doc["name"],LtrDrop().fromDoc(parent,doc))
-
-            local_files = dict(map(mkdrop,local_files))
+            local_files = dict(map(lambda x: (x.name,x),parent.getIndex(self)))
             for drop in parent.children():
                 file_is_known = False
                 file_changed = False

@@ -47,12 +47,22 @@ class LtrDrop(LtrUri):
     def fromDoc(self,parent,doc):
         self.parent = parent
         self.record = doc
+        self.name = doc["name"]
         return self
     def fromBox(self,box):
         if box.space:
             self.record = box.space.records[box.record["rootnode"]]
         self.fromDisk(box.path) 
         return self
+
+    def getIndex(self,box):
+        global_files = list(box.space.records.view("ltrcrawler/by-parent",key=self.record["_id"]))
+        filter_this_box = lambda x: box.record["_id"] in x["value"]["present"] 
+        local_files = filter(filter_this_box,global_files)
+        def mkdrop(doc):
+            doc = doc["value"]
+            return LtrDrop().fromDoc(self,doc)
+        return map(mkdrop,local_files)
 
     def children(self):
         if self.ftype != "dir":
