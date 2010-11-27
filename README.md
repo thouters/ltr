@@ -1,10 +1,10 @@
 # Litter
 
-Decentralised file distribution.
+Decentralised personal file distribution (on a redundant array of inexpensive laptops).
 
-I created Litter (`Ltr` henceforward) to be the Dropbox/Ubuntu One of power
-users, built to feel familiar for shell users.  Using technologies like ssh
-and it's uri's and creating on an off-line, de-centralised topology.
+I created Litter (`Ltr` henceforward) to be a personal Dropbox/Ubuntu One.
+Initially targetted at power users, and build to feel familiar for shell users.
+Using technologies like ssh and scp's user@host:/path uri's. 
 
 Ltr uses a filesystem crawler in python to correlate files from a local folder
 against the index of the volume (the `LtrSpace`) to which they belong.
@@ -26,11 +26,11 @@ show which files don't have any redundant copies.
 Each LtrBox has a `.ltr` file, containing the url to the couchdb document
 containing LtrBox details.
 
-A LtrSpace adheres to a policy which specifies the behaviour of `pull`
+A LtrBox adheres to a policy which specifies the behaviour of `pull`
 operations.  A LtrBox can have on of three policies set: 
 
-* `ondemand`: only pull-in copies of files which are marked to be in said Box explicitly
-* `complete`: try to obtain all files in the Space
+* `ondemand`: only pull-in files which are marked to be in the LtrBox explicitly
+* `complete`: all files in the space are wanted
 * `skeleton`: as a minimum, retain the bare directory structure of the space on-disk.
 
 A couchapp (to be created) can allow for easy manipulation of the
@@ -44,8 +44,9 @@ streamlined like this:
 
 * mark the desired files as `requested` on a thumbdrive
 * mark the desired files as `requested` on the remote `LtrBox`
-* pull the files onto thumbdrive 
-* pull the files from thumbdrive to the destination system.
+* pull the files onto thumbdrive  
+* physically move thumbdrive to destination
+* mount and pull the files from thumbdrive to the destination system.
 
 ## Operations
 
@@ -71,11 +72,6 @@ streamlined like this:
     N /notes.html
     N /subdir1/maximus_0.4.14.orig.tar.gz
 
-    thomas@maytag abc % ltr
-    w /abc
-    w /def
-    w /notes.html
-    w /subdir1
 
 info:
 
@@ -101,18 +97,23 @@ info:
     thomas@maytag box2dir % ltr clone box2 ../xyz .
     ltr: new box to database  <ltrbox testspace/box2 >
     ltr: wrote cookie for  box2
+    thomas@maytag box2dir % ltr
+    w /abc
+    w /def
+    w /notes.html
+    w /subdir1
 
 
 ### pull user@host:/path/to/another-box
 
-    thomas@maytag abc % ltr pull ../xyz
+    thomas@maytag box2dir % ltr pull ../xyz
     ltr: pull  ../xyz
-    cp ../xyz/notes.html /home/thomas/abc/notes.html
-    cp ../xyz/def /home/thomas/abc/def
-    cp ../xyz/subdir1 /home/thomas/abc/subdir1/maximus_0.4.14.orig.tar.gz
-    cp ../xyz/abc /home/thomas/abc/abc
+    cp ../xyz/notes.html /home/thomas/box2dir/notes.html
+    cp ../xyz/def /home/thomas/box2dir/def
+    cp ../xyz/subdir1 /home/thomas/box2dir/subdir1/maximus_0.4.14.orig.tar.gz
+    cp ../xyz/abc /home/thomas/box2dir/abc
     ....
-    thomas@maytag abc % 
+    thomas@maytag box2dir % 
 
 ## Roadmap
 
