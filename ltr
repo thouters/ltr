@@ -5,9 +5,14 @@ import os
 
 if __name__ == "__main__":
     
+    dryrun = False
     opts = argv
     opts.pop(0)
     if len(argv):
+        if "-n" in opts:
+            dryrun = True
+            print "performing dryrun"
+            opts.remove("-n")
         cmd = opts.pop(0)
     else:
         cmd = "status"
@@ -34,17 +39,15 @@ if __name__ == "__main__":
         dstbox.writeCookie()
 
     if cmd == "commit":
-        #crawl, show diff of changes
         box = LtrBox().fromCookie(os.getcwd())
-        box.crawl(commit=True)
+        box.commit(dryrun=False)
 
     if cmd == "diff":
         pass
 
     if cmd == "status":
-        #crawl, show diff of changes
         box = LtrBox().fromCookie(os.getcwd())
-        box.crawl(commit=False)
+        box.commit(dryrun=True)
 
     if cmd == "pull":
         dst = os.getcwd()
@@ -53,7 +56,7 @@ if __name__ == "__main__":
 
         srcbox = LtrBox(dstbox.space).fromCookie(src)
 
-        dstbox.pull(srcbox)
+        dstbox.pull(srcbox,dryrun=dryrun)
 
     if cmd == "ls":
         thisbox = LtrBox().fromCookie(os.getcwd())

@@ -4,6 +4,7 @@ import uuid
 from drop import LtrDrop
 from space import LtrSpace
 from uri import LtrUri
+import shutil
 
 class LtrCookieException(Exception):
     pass
@@ -107,13 +108,43 @@ class LtrBox(LtrUri):
 
         self.boxuri = self.space.getBoxUri(self.name)
 
-    def pull(self,srcbox):
+    def pull(self,srcbox,dryrun=True):
         print "ltr: pull ", srcbox.path
-
-
-    def crawl(self,commit=True):
         dirqueue=[self.dropbox]
-        minus = []
+        updates = []
+        while len(dirqueue):
+            parent = dirqueue.pop(0)
+            idx = parent.getIndex(self)
+            wantedfilter = lambda x: self.name not in x.record["present"] 
+            wanted = filter(wantedfilter,idx)
+            for drop in wanted:
+                #fixme: use diskpath
+                src = os.path.join(srcbox.path,drop.volpath.strip('/'))
+                dst = os.path.join(self.path,drop.volpath.strip('/'))
+                print "cp %s %s " % (src,dst)
+                if not dryrun:
+                    try:
+                        shutil.copy2(src,dst)
+                        drop.record["present"].append(self.name)
+                        updates.append(drop)
+                    except:
+                        print "error"
+
+        if not dryrun:
+            print "." * len(updates)
+            updates = map(lambda x: x.record,updates)
+            self.space.records.update(updates)
+            #print "ltr: compact database"
+            self.space.records.compact()
+
+        if len(updates):
+            return True
+        else:
+            return False
+
+    def commit(self,dryrun=True):
+        dirqueue=[self.dropbox]
+        absent = []
         plus = []
         updates = []
 
@@ -145,7 +176,7 @@ class LtrBox(LtrUri):
                 if drop.record["meta"]["ftype"] == "file" \
                 and (not file_is_known \
                 or file_is_known.record["meta"]["mtime"] != drop.record["meta"]["mtime"]):
-                    if commit:
+                    if not dryrun:
                         drop.record["meta"]["hash"] = drop.gethash()
                         drop.record["meta"]["mime"] = drop.getmime()
             
@@ -179,17 +210,17 @@ class LtrBox(LtrUri):
             #fixme: recurse into directories to delete 
             if len(local_files.keys()):
                 for drop in local_files.itervalues():
-                    minus.append(drop)
+                    absent.append(drop)
             
     
         for i,newdrop in enumerate(plus):
             #find new old files in list of removed files
             trail = filter(lambda d: "hash" in newdrop.record["meta"] \
                                     and hash in d["meta"] \
-                                    and newdrop.record["meta"]==d["meta"], minus)
+                                    and newdrop.record["meta"]==d["meta"], absent)
             if len(trail): 
                 old = trail[0]
-                minus.remove(old)
+                absent.remove(old)
                 if len(old["present"] >1):
                     print "R %s -> %s" %(old["name"],newdrop.record["name"])
                     continue
@@ -200,11 +231,15 @@ class LtrBox(LtrUri):
     
         updates += plus
     
-        for doc in minus:
-            doc["_deleted"] =True
-            updates.append(doc)
+        for drop in absent:
+            if self.name in drop.record["present"]:
+                drop.record["present"].remove(self.name)
+                print "D %s" %(drop.volpath)
+            else:
+                print "w %s" %(drop.volpath)
+            updates.append(drop)
 
-        if commit:
+        if not dryrun:
             print "." * len(updates)
             updates = map(lambda x: x.record,updates)
             self.space.records.update(updates)

@@ -1,5 +1,6 @@
 
-ltr: "lsforeign"
+LtrDrop(LtrNode)
+LtrDropInstance
 ltr: "stat file"
 ltr: "checkout file"
 ltr: "diff . boxname" command
