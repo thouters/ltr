@@ -49,60 +49,67 @@ onto the destination system.
 
 ### Create LtrSpace and box
 
-thomas@maytag ~ % mkdir xyz; cd xyz
-thomas@maytag ~ % ltr create http://thomas:geheim@localhost:5984/testspace/boxname .
-ltr: create database  testspace
-ltr: push design docs  testspace
-ltr: new box to database  <ltrbox testspace/boxname >
-ltr: wrote cookie for  boxname
+    thomas@maytag ~ % mkdir xyz; cd xyz
+    thomas@maytag ~ % ltr create http://thomas:geheim@localhost:5984/testspace/boxname .
+    ltr: create database  testspace
+    ltr: push design docs  testspace
+    ltr: new box to database  <ltrbox testspace/boxname >
+    ltr: wrote cookie for  boxname
 
 ### ltr status
 
-thomas@maytag xyz % touch abc def
-thomas@maytag xyz % cp ~/0385730624.pdf .
-thomas@maytag xyz % mkdir subdir1
-thomas@maytag xyz % cp ../maximus_0.4.14.orig.tar.gz subdir1
-thomas@maytag xyz % ltr status
-N /abc
-N /def
-N /subdir1
-N /notes.html
-N /subdir1/maximus_0.4.14.orig.tar.gz
+    thomas@maytag xyz % touch abc def
+    thomas@maytag xyz % cp ~/0385730624.pdf .
+    thomas@maytag xyz % mkdir subdir1
+    thomas@maytag xyz % cp ../maximus_0.4.14.orig.tar.gz subdir1
+    thomas@maytag xyz % ltr status
+    N /abc
+    N /def
+    N /subdir1
+    N /notes.html
+    N /subdir1/maximus_0.4.14.orig.tar.gz
 
-thomas@maytag abc % ltr
-w /abc
-w /def
-w /notes.html
-w /subdir1
+    thomas@maytag abc % ltr
+    w /abc
+    w /def
+    w /notes.html
+    w /subdir1
 
 info:
-n New
-L lost (last copy disapeared)
-w wanted (queued)
-D discarded (ltr rm)
+*   n New
+*   L lost (last copy disapeared)
+*   w wanted (queued)
+*   D discarded (ltr rm)
 
 ### ltr commit
 
-thomas@maytag xyz % ltr commit
-N /abc
-N /def
-N /subdir1
-N /notes.html
-N /subdir1/maximus_0.4.14.orig.tar.gz
-.....
+    thomas@maytag xyz % ltr commit
+    N /abc
+    N /def
+    N /subdir1
+    N /notes.html
+    N /subdir1/maximus_0.4.14.orig.tar.gz
+    .....
+    thomas@maytag xyz %
 
 ### clone box
 
-thomas@maytag ~ % cd ..; mkdir box2dir; cd box2dir
-thomas@maytag box2dir % ltr clone box2 ../xyz .
-ltr: new box to database  <ltrbox testspace/box2 >
-ltr: wrote cookie for  box2
+    thomas@maytag ~ % cd ..; mkdir box2dir; cd box2dir
+    thomas@maytag box2dir % ltr clone box2 ../xyz .
+    ltr: new box to database  <ltrbox testspace/box2 >
+    ltr: wrote cookie for  box2
 
-thomas@maytag box2dir % ltr
 
 ### pull user@host:/path/to/another-box
 
-
+    thomas@maytag abc % ltr pull ../xyz
+    ltr: pull  ../xyz
+    cp ../xyz/notes.html /home/thomas/abc/notes.html
+    cp ../xyz/def /home/thomas/abc/def
+    cp ../xyz/subdir1 /home/thomas/abc/subdir1/maximus_0.4.14.orig.tar.gz
+    cp ../xyz/abc /home/thomas/abc/abc
+    ....
+    thomas@maytag abc % 
 
 ## Roadmap
 
