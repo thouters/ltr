@@ -87,6 +87,7 @@ class LtrDrop(LtrUri):
                     names.remove(ignore)
         return map(lambda n: LtrDrop().fromDisk(n,self),names)
 
+
     def gethash(self):
         f = open(self.diskpath)
         h = hashlib.sha1()
@@ -104,6 +105,14 @@ class LtrDrop(LtrUri):
              stdin=fd, stdout=subprocess.PIPE).communicate()[0]
         fd.close()
         return m.strip()
+
+    def stat(self):
+        s= "File: %s\n" % self.volpath
+        s+= "size: %d\n" % self.record["meta"]["size"]
+        s+= "type: %s\n"  % self.record["meta"]["ftype"]
+        s+= "mimetype: %s\n" % self.record["meta"]["mime"]
+        s+= "drops: %s\n" % self.record["present"]
+        return s
 
 
 class LtrFileTest(unittest.TestCase):

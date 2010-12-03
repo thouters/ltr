@@ -49,6 +49,11 @@ if __name__ == "__main__":
         box = LtrBox().fromCookie(os.getcwd())
         box.commit(dryrun=True)
 
+    if cmd == "stat":
+        box = LtrBox().fromCookie(os.getcwd())
+        fname = opts.pop(0)
+        print box.getDrop(fname).stat()
+
     if cmd == "pull":
         dst = os.getcwd()
         src = opts.pop(0)

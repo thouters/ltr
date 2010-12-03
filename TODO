@@ -1,7 +1,6 @@
 
-LtrDrop(LtrNode)
-LtrDropInstance
-ltr: "stat file"
+make ltr commit crawl all the way into new directories
+
 ltr: "checkout file"
 ltr: "diff . boxname" command
 ltr: "ping boxname" command (attempt to access dropbox and set it as origin) 

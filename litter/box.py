@@ -45,6 +45,21 @@ class LtrBox(LtrUri):
     def getUri(self):
         return "/".join(self.dbserveruri.strip("/"),self.spacename)
 
+    def getDrop(self,fullvolpath):
+
+        fname = fullvolpath.split("/")[-1]
+        dirpath = fullvolpath[0:-len(fname)]
+        #query view to get parent
+        if dirpath=="/":
+            qpath="ROOT"
+        else:
+            qpath=dirpath
+        pathindex= list(self.space.records.view("ltrcrawler/by-parent",key=qpath))
+        files = dict(map(lambda x: (x.value["name"],x.value),pathindex))
+        parent = lambda a:None
+        parent.volpath=dirpath
+        return LtrDrop().fromDoc(parent,files[fname])
+
     def createfromUri(self,uri):
         if not self.space:
             s = LtrSpace().createfromUri(uri)
@@ -85,6 +100,7 @@ class LtrBox(LtrUri):
         c = f.read().strip()
         self.setUri(c)
         self.setPath(testpath)
+        self.workdir = path[len(testpath):]
         f.close()
         return self
 
@@ -129,6 +145,9 @@ class LtrBox(LtrUri):
                         updates.append(drop)
                     except:
                         print "error"
+            for drop in idx:
+                if drop.ftype=="dir":
+                    dirqueue.append(drop)
 
         if not dryrun:
             print "." * len(updates)
@@ -178,7 +197,10 @@ class LtrBox(LtrUri):
                 or file_is_known.record["meta"]["mtime"] != drop.record["meta"]["mtime"]):
                     if not dryrun:
                         drop.record["meta"]["hash"] = drop.gethash()
-                        drop.record["meta"]["mime"] = drop.getmime()
+                        if drop.record["meta"]["ftype"] == "directory":
+                            drop.record["meta"]["mime"] = "application/x-directory"
+                        else:
+                            drop.record["meta"]["mime"] = drop.getmime()
             
                 if file_is_known:
                     for attr in drop.features:

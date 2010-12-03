@@ -6,7 +6,6 @@ views = {
     'by-hash': { 'map': "function(doc) { if (doc.doctype == \"node\" && doc.meta.hash) emit(doc.meta.hash, doc); }" },
     'by-parent': { 'map': "function(doc) { if (doc.doctype == \"node\") emit(doc.parent, doc); }"},
     'tree': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.meta.ftype==\"dir\") emit(doc.meta.path, doc); }" },
-    'dirs': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.meta.ftype==\"dir\") emit(doc); }" },
 }
 
 
