@@ -4,6 +4,7 @@ from drop import LtrDrop
 from uri import LtrUri
 from node import LtrNode
 from couchdb.mapping import *
+import sys
 
 class LtrCookieException(Exception):
     pass
@@ -102,6 +103,9 @@ class LtrBox(LtrUri,Document):
         return False
 
     def commit(self,startNode=False,dryrun=True):
+        def show(x):
+            sys.stdout.write("\r"+ x.replace("\n"," "*20+"\n"))
+            sys.stdout.flush()
         treeQueue=[]
         updates = []
         if startNode == False:
@@ -127,7 +131,8 @@ class LtrBox(LtrUri,Document):
                 localdrop = drops[filename]
                 diff  = localnode.diff(localdrop)
                 if diff != []:
-                    print "M %s %s" %(localdrop.volpath,diff)
+                    show("M %s %s\n" %(localdrop.volpath,diff))
+                    show("[ updateDrop %s ]" % localdrop.volpath )
                     localnode.updateDrop(localdrop)
                     updates.append(localnode)
                 if localnode.meta.ftype == "dir":
@@ -138,7 +143,7 @@ class LtrBox(LtrUri,Document):
                     treeQueue.append((LtrDrop(),nonlocalnode))
                 if self.id in nonlocalnode.present:
                     nonlocalnode.present.remove(self.id)
-                    print "D %s" %(nonlocalnode.volpath)
+                    show("D %s\n" %(nonlocalnode.volpath))
                     updates.append(nonlocalnode)
 
             for newdrop in map(lambda x:drops.get(x),newkeys):
@@ -146,9 +151,10 @@ class LtrBox(LtrUri,Document):
                 newnode = LtrNode().new(node.id)
 
                 if not self.id in newnode.present:
+                    show("[ updateDrop %s ]" % newdrop.volpath )
                     newnode.updateDrop(newdrop,dryrun=dryrun)
                     newnode.present.append(self.id)
-                    print "N %s" %(newdrop.volpath)
+                    show("N %s\n" %(newdrop.volpath))
                     updates.append(newnode)
 
                 if newdrop.ftype == "dir":
