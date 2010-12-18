@@ -4,16 +4,17 @@ import subprocess
 from os import listdir, stat
 import unittest
 from uri import LtrUri
-#from box import LtrBox
+
 
 class LtrDrop(LtrUri):
     def __init__(self):
         self.record = {}
         self.ignoreFileName=".ltrignore"
 
-    def fromDisk(self,name,parent=False):
-        if parent:
-            self.parent = parent
+    def fromDisk(self,name,parentdrop=False):
+        """ """
+        if parentdrop:
+            self.parent = parentdrop
             self.volroot = self.parent.volroot
             self.name = name
             self.path = join(self.parent.path,self.parent.name)
@@ -25,11 +26,11 @@ class LtrDrop(LtrUri):
             self.path="/"
             self.volpath="/"
             self.name=""
-            self.record["_id"] = "ROOT"
+            #self.record["_id"] = "ROOT"
    
         if isfile(self.diskpath):
             self.ftype = "file"
-            self.features = ["ftype","mtime","size","hash"]
+            self.features = ["ftype","mtime","size"]
         elif isdir(self.diskpath):
             self.ftype = "dir" 
             self.features = ["ftype"]
@@ -40,7 +41,7 @@ class LtrDrop(LtrUri):
             raise Exception, "filetype not handled!"
 
         st = stat(self.diskpath)
-        self.mtime = st.st_mtime
+        self.mtime = int(st.st_mtime)
         self.size = st.st_size
         return self
 
@@ -50,18 +51,7 @@ class LtrDrop(LtrUri):
         self.name = doc["name"]
         self.volpath = join(parent.volpath,self.name)
         return self
-    def fromBox(self,box):
-        if box.space:
-            self.record = box.space.records[box.record["rootnode"]]
-        self.fromDisk(box.path) 
-        return self
 
-    def getIndex(self,box):
-        global_files = list(box.space.records.view("ltrcrawler/by-parent",key=self.record["_id"]))
-        def mkdrop(doc):
-            doc = doc["value"]
-            return LtrDrop().fromDoc(self,doc)
-        return map(mkdrop,global_files)
 
     def children(self):
         if self.ftype != "dir":
@@ -88,7 +78,10 @@ class LtrDrop(LtrUri):
         return map(lambda n: LtrDrop().fromDisk(n,self),names)
 
 
-    def gethash(self):
+    def calcHash(self):
+        """ calculate sha1sum of file contents self.diskpath """
+        if isdir(self.diskpath):
+            return ""
         f = open(self.diskpath)
         h = hashlib.sha1()
         #print "ltr: digest ", self.diskpath
@@ -97,8 +90,12 @@ class LtrDrop(LtrUri):
         f.close()
         return h
 
-    def getmime(self):
-        #fixme; no memory mapping possible
+    def calcMime(self):
+        """ Determine mimetype from diskpath """
+        if isdir(self.diskpath):
+            return "application/x-directory"
+        if islink(self.diskpath):
+            return "application/x-symlink"
         magiccmd = "/usr/bin/file -b --mime-type -- -"
         fd = open(self.diskpath,'r')
         m = subprocess.Popen(magiccmd, shell=True, \
@@ -106,13 +103,6 @@ class LtrDrop(LtrUri):
         fd.close()
         return m.strip()
 
-    def stat(self):
-        s= "File: %s\n" % self.volpath
-        s+= "size: %d\n" % self.record["meta"]["size"]
-        s+= "type: %s\n"  % self.record["meta"]["ftype"]
-        s+= "mimetype: %s\n" % self.record["meta"]["mime"]
-        s+= "drops: %s\n" % self.record["present"]
-        return s
 
 
 class LtrFileTest(unittest.TestCase):
@@ -150,7 +140,7 @@ class LtrFileTest(unittest.TestCase):
 
     def testMime(self):
         a = LtrDrop().fromDisk(self.pngfile,self.dropbox) 
-        self.assertEqual(a.getmime(),"image/png")
+        self.assertEqual(a.calcMime(),"image/png")
 
     def testSize(self):
         a = LtrDrop().fromDisk(self.pngfile,self.dropbox) 
@@ -159,7 +149,7 @@ class LtrFileTest(unittest.TestCase):
     def testHash(self):
         rootfiles = self.dropbox.children()
         pngfile = filter(lambda x: x.name == self.pngfile,rootfiles)[0]
-        self.assertEqual(pngfile.gethash(),self.tinypngsha1sum)
+        self.assertEqual(pngfile.calcHash(),self.tinypngsha1sum)
 
     def testlocation(self):
         rootfiles = self.dropbox.children()

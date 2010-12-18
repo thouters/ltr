@@ -1,28 +1,30 @@
 import os
 from os.path import isfile
-import uuid
 from drop import LtrDrop
-from space import LtrSpace
 from uri import LtrUri
-import shutil
+from node import LtrNode
+from couchdb.mapping import *
 
 class LtrCookieException(Exception):
     pass
 
-class LtrBox(LtrUri):
+class LtrBox(LtrUri,Document):
+    doctype = TextField()
+    policy = TextField()
+    rootnode = TextField()
 
     def __repr__(self):
         s = "<ltrbox %s/%s >" % (self.space.name,self.name)
         return s
 
     def __init__(self,space=False):
+        Document.__init__(self)
         self.record = False
         self.name = False
         self.dropbox = False
         self.space = False
         self.uri=False
         self.path = False
-        self.policy = "complete" # "skeleton" "ondemand" 
         self.cwd = False #set drop in loadcookie()
 
         if space:
@@ -30,23 +32,18 @@ class LtrBox(LtrUri):
 
     def setSpace(self,space):
         self.space = space
+        return self
 
     def setUri(self,uri):
         LtrUri.setUri(self,uri)
         self.name = self.boxname
-        if not self.space:
-            self.setSpace(LtrSpace().setUri(uri))
 
-        self.getRecord()
-        self.dropbox = LtrDrop()
-        self.dropbox.record["_id"] = "ROOT"
         return self
 
     def getUri(self):
         return "/".join(self.dbserveruri.strip("/"),self.spacename)
 
     def getDrop(self,fullvolpath):
-
         fname = fullvolpath.split("/")[-1]
         dirpath = fullvolpath[0:-len(fname)]
         #query view to get parent
@@ -54,55 +51,22 @@ class LtrBox(LtrUri):
             qpath="ROOT"
         else:
             qpath=dirpath
-        pathindex= list(self.space.records.view("ltrcrawler/by-parent",key=qpath))
-        files = dict(map(lambda x: (x.value["name"],x.value),pathindex))
-        parent = lambda a:None
-        parent.volpath=dirpath
-        return LtrDrop().fromDoc(parent,files[fname])
+        parent= list(LtrNode.view(self.space.records,"ltrcrawler/tree",key=qpath))
+        if 0==len(parent):
+            child=None
+        else:
+            parent = parent[0]
+            child= list(LtrNode.view(self.space.records,"ltrcrawler/by-parent",key=[parent._id,fname]))
+            child.setParent(parent)
+        return child
 
-    def createfromUri(self,uri):
-        if not self.space:
-            s = LtrSpace().createfromUri(uri)
-            self.setSpace(s)
-        LtrUri.setUri(self,uri)
-        self.name = self.boxname
-        self.create()
-        return self
+    def getRootNode(self):
+        return LtrNode.load(self.space.records,self.rootnode).connect(self.space,self)
 
-    def create(self):
-        self.record = {}
-        self.record["_id"] = self.name
-        self.record["doctype"] = "box"
-        self.record["policy"] = self.policy
-        self.record["rootnode"] = "ROOT"
-        print "ltr: new box to database ", self
-        self.space.records.update([self.record])
-
-    def getRecord(self):
-        self.record = self.space.records[self.boxname]
 
     def setPath(self,path):
         self.path = path
         self.dropbox = LtrDrop().fromDisk(path)
-
-    def fromCookie(self,path):
-        #find cookie
-        testpath = path 
-        while len(testpath)>1:
-            testfile = os.path.join(testpath,".ltr") 
-            if isfile(testfile):
-                break
-            testpath = os.path.dirname(testpath)
-        if len(testpath) == 1:
-            raise LtrCookieException("directory not in litter dropbox: %s"%path)
-
-        f = open(testfile,'r')
-        c = f.read().strip()
-        self.setUri(c)
-        self.setPath(testpath)
-        self.workdir = path[len(testpath):]
-        f.close()
-        return self
 
     def writeCookie(self,path=False):
         if path:
@@ -124,152 +88,93 @@ class LtrBox(LtrUri):
 
         self.boxuri = self.space.getBoxUri(self.name)
 
-    def pull(self,srcbox,dryrun=True):
+    def pull(self,srcbox,startNode=False,dryrun=True):
         print "ltr: pull ", srcbox.path
-        dirqueue=[self.dropbox]
-        updates = []
-        while len(dirqueue):
-            parent = dirqueue.pop(0)
-            idx = parent.getIndex(self)
-            wantedfilter = lambda x: self.name not in x.record["present"] 
-            wanted = filter(wantedfilter,idx)
-            for drop in wanted:
-                #fixme: use diskpath
-                src = os.path.join(srcbox.path,drop.volpath.strip('/'))
-                dst = os.path.join(self.path,drop.volpath.strip('/'))
-                print "cp %s %s " % (src,dst)
-                if not dryrun:
-                    try:
-                        shutil.copy2(src,dst)
-                        drop.record["present"].append(self.name)
-                        updates.append(drop)
-                    except:
-                        print "error"
-            for drop in idx:
-                if drop.ftype=="dir":
-                    dirqueue.append(drop)
-
-        if not dryrun:
-            print "." * len(updates)
-            updates = map(lambda x: x.record,updates)
-            self.space.records.update(updates)
-            #print "ltr: compact database"
-            self.space.records.compact()
-
-        if len(updates):
-            return True
-        else:
-            return False
-
-    def commit(self,dryrun=True):
-        dirqueue=[self.dropbox]
-        absent = []
-        plus = []
-        updates = []
-
-        while len(dirqueue):
-            parent = dirqueue.pop(0)
-            #print "ltr: crawl ",parent.diskpath
-            
-            local_files = dict(map(lambda x: (x.name,x),parent.getIndex(self)))
-            for drop in parent.children():
-                file_is_known = False
-                file_changed = False
-                drop.record["parent"]= parent.record["_id"]
-                drop.record["present"]= [self.record["_id"]]
-                drop.record["name"]= drop.name
-                drop.record["doctype"] = "node"
-                drop.record["meta"] = {}
-                drop.record["meta"]['ftype'] = drop.ftype
-                drop.record["meta"]['size'] = drop.size
-                drop.record["meta"]['mtime'] = drop.mtime
-                if drop.ftype == "dir":
-                    drop.record["meta"]["path"]= drop.volpath
-            
-                if drop.name in local_files:
-                    file_is_known = local_files[drop.name]
-                    #print "ltr: known ",drop.volpath
-                else:
-                    drop.record["_id"]= uuid.uuid4().hex
-
-                if drop.record["meta"]["ftype"] == "file" \
-                and (not file_is_known \
-                or file_is_known.record["meta"]["mtime"] != drop.record["meta"]["mtime"]):
-                    if not dryrun:
-                        drop.record["meta"]["hash"] = drop.gethash()
-                        if drop.record["meta"]["ftype"] == "directory":
-                            drop.record["meta"]["mime"] = "application/x-directory"
-                        else:
-                            drop.record["meta"]["mime"] = drop.getmime()
-            
-                if file_is_known:
-                    for attr in drop.features:
-                        if attr in drop.record["meta"]:
-                            if not attr in file_is_known.record["meta"] \
-                            or file_is_known.record["meta"][attr] != drop.record["meta"][attr]:
-                                file_changed=True
-                                break
-    
-            
-                if not drop.name in local_files:
-                    print "N", drop.volpath
-                    plus.append(drop)
-                elif file_changed:
-                    print "M", drop.volpath
-                    if not self.record["_id"] in file_is_known.record["present"]:
-                        file_is_known.record["present"].append(self.record["_id"])
-                    file_is_known.record["meta"] = drop.record["meta"]
+        for src in []:
+            print "cp %s %s " % (src,dst)
+            if not dryrun:
+                try:
+                    shutil.copy2(src,dst)
+                    drop.record["present"].append(self.name)
                     updates.append(drop)
-                else:
-                    drop.record = file_is_known.record
-            
-                if drop.ftype=="dir":
-                    dirqueue.append(drop)
-            
-                if drop.name in local_files:
-                    del local_files[drop.name]
-    
-            #fixme: recurse into directories to delete 
-            if len(local_files.keys()):
-                for drop in local_files.itervalues():
-                    absent.append(drop)
-            
-    
-        for i,newdrop in enumerate(plus):
-            #find new old files in list of removed files
-            trail = filter(lambda d: "hash" in newdrop.record["meta"] \
-                                    and hash in d["meta"] \
-                                    and newdrop.record["meta"]==d["meta"], absent)
-            if len(trail): 
-                old = trail[0]
-                absent.remove(old)
-                if len(old["present"] >1):
-                    print "R %s -> %s" %(old["name"],newdrop.record["name"])
-                    continue
-                else:
-                    print "R %s -> %s" %(old["name"],newdrop.record["name"])
-                    plus[i].record["_id"] = old["_id"]
-                    plus[i].record["_rev"] = old["_rev"]
-    
-        updates += plus
-    
-        for drop in absent:
-            if self.name in drop.record["present"]:
-                drop.record["present"].remove(self.name)
-                print "D %s" %(drop.volpath)
-            else:
-                print "w %s" %(drop.volpath)
-            updates.append(drop)
+                except:
+                    print "error"
+        return False
+
+    def commit(self,startNode=False,dryrun=True):
+        treeQueue=[]
+        updates = []
+        if startNode == False:
+            startNode = self.getRootNode()
+
+        #print startNode
+        treeQueue.append( (self.dropbox,startNode) )
+
+        while len(treeQueue):
+            (drop,node)= treeQueue.pop(0)
+            nodes = node.children()
+            drops = drop.children()
+            nodes = dict(map(lambda node: (node.name,node),nodes))
+            drops = dict(map(lambda drop: (drop.name,drop),drops))
+
+            #allkeys = set(drops.keys()) | set(nodes.keys())
+            newkeys = set(drops.keys()) - set(nodes.keys())
+            lesskeys = set(nodes.keys()) - set(drops.keys())
+            staykeys = set(nodes.keys()) & set(drops.keys())
+
+            for filename in staykeys:
+                localnode = nodes[filename]
+                diff  = localnode.diff(drops[filename])
+                if diff != []:
+                    print "X %s, %s" %(localnode.name,diff)
+                    localnode.updateDrop(drops[filename])
+                    updates.append(localnode)
+
+            for nonlocalnode in map(lambda x:nodes.get(x),lesskeys):
+                if nonlocalnode.ftype == "dir":
+                    treeQueue.append((NONEXISTINGDROP,nonlocalnode))
+                if self.id in nonlocalnode.present:
+                    nonlocalnode.present.remove(self.id)
+                    print "D %s" %(nonlocalnode.volpath)
+                    updates.append(nonlocalnode)
+
+            for newdrop in map(lambda x:drops.get(x),newkeys):
+
+                newnode = LtrNode().new(node.id)
+
+                if not self.id in newnode.present:
+                    newnode.updateDrop(newdrop)
+                    newnode.present.append(self.id)
+                    print "N %s" %(newdrop.volpath)
+                    updates.append(newnode)
+
+                if newdrop.ftype == "dir":
+                    treeQueue.append((newdrop,newnode))
 
         if not dryrun:
             print "." * len(updates)
-            updates = map(lambda x: x.record,updates)
             self.space.records.update(updates)
-            #print "ltr: compact database"
-            self.space.records.compact()
 
         if len(updates):
+            import pprint
+            pprint.pprint(updates)
             return True
         else:
             return False
-     
+
+    def create(self):
+        self.id = self.name
+        self.doctype = "box"
+        self.policy = "complete"
+        self.rootnode = "ROOT"
+        print "ltr: new box to database ", self
+        self.store(self.space.records)
+
+    @classmethod
+    def createfromUri(self,uri):
+        LtrUri.setUri(self,uri)
+        self.name = self.boxname
+        self.create()
+        return self
+
+

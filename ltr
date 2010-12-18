@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from sys import argv
-from litter import LtrBox
+from litter import LtrSpace, LtrBox
 import os
 
 if __name__ == "__main__":
@@ -20,8 +20,9 @@ if __name__ == "__main__":
     if cmd == "create":
         uri = opts.pop(0).strip()
         directory = opts.pop(0)
-        box = LtrBox()
-        box.createfromUri(uri)
+        space = LtrSpace().createfromUri(uri)
+        box = LtrBox(space).setUri(uri)
+        box.create()
         box.setPath(directory)
         box.writeCookie()
 
@@ -30,7 +31,7 @@ if __name__ == "__main__":
         src = opts.pop(0).strip()
         dst = opts.pop(0).strip()
 
-        srcbox = LtrBox().fromCookie(src)
+        srcbox = LtrSpace.fromCookie(src)
         
         dstbox = LtrBox(srcbox.space)
         dstbox.setPath(dst)
@@ -39,35 +40,36 @@ if __name__ == "__main__":
         dstbox.writeCookie()
 
     if cmd == "commit":
-        box = LtrBox().fromCookie(os.getcwd())
+        box = LtrSpace.fromCookie(os.getcwd())
         box.commit(dryrun=False)
 
     if cmd == "diff":
         pass
 
     if cmd == "status":
-        box = LtrBox().fromCookie(os.getcwd())
+        box = LtrSpace.fromCookie(os.getcwd())
         box.commit(dryrun=True)
 
     if cmd == "stat":
-        box = LtrBox().fromCookie(os.getcwd())
+        box = LtrSpace.fromCookie(os.getcwd())
         fname = opts.pop(0)
-        print box.getDrop(fname).stat()
+        node = box.getDrop(fname)
+        if node != None:
+            print node.stat()
 
     if cmd == "pull":
         dst = os.getcwd()
         src = opts.pop(0)
-        dstbox = LtrBox().fromCookie(dst)
-
-        srcbox = LtrBox(dstbox.space).fromCookie(src)
+        dstbox = LtrSpace.fromCookie(dst)
+        srcbox = LtrSpace.fromCookie(src,space=dstbox.space)
 
         dstbox.pull(srcbox,dryrun=dryrun)
 
     if cmd == "ls":
-        thisbox = LtrBox().fromCookie(os.getcwd())
+        thisbox = LtrSpace.fromCookie(os.getcwd())
         if len(opts):
             boxid = opts.pop(0)
-            box = LtrBox(thisbox.space).setUri(thisbox.space.getBoxUri(boxid))
+            box = LtrBox.getInstance(thisbox.space,thisbox.space.getBoxUri(boxid))
         else:
             box = thisbox
  
@@ -76,5 +78,5 @@ if __name__ == "__main__":
         else:
             f = box.dropbox
 
-        print "\n".join(map(lambda x: x.name, f.getIndex(box)))
+        print "\n".join(map(lambda x: x.name, f.children()))
 
