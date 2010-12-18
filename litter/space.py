@@ -44,7 +44,7 @@ class LtrSpace(LtrUri):
         return self.spaceuri+name
 
     def connectDatabaseServer(self):
-        print "ltr: connect", self.dbserveruri
+        #print "ltr: connect", self.dbserveruri
         self.dbcursor = couchdb.Server(self.dbserveruri)
 
     def getCursor(self):

@@ -124,15 +124,18 @@ class LtrBox(LtrUri,Document):
 
             for filename in staykeys:
                 localnode = nodes[filename]
-                diff  = localnode.diff(drops[filename])
+                localdrop = drops[filename]
+                diff  = localnode.diff(localdrop)
                 if diff != []:
-                    print "X %s, %s" %(localnode.name,diff)
-                    localnode.updateDrop(drops[filename])
+                    print "M %s %s" %(localdrop.volpath,diff)
+                    localnode.updateDrop(localdrop)
                     updates.append(localnode)
+                if localnode.meta.ftype == "dir":
+                    treeQueue.append((localdrop,localnode))
 
             for nonlocalnode in map(lambda x:nodes.get(x),lesskeys):
-                if nonlocalnode.ftype == "dir":
-                    treeQueue.append((NONEXISTINGDROP,nonlocalnode))
+                if nonlocalnode.meta.ftype == "dir":
+                    treeQueue.append((LtrDrop(),nonlocalnode))
                 if self.id in nonlocalnode.present:
                     nonlocalnode.present.remove(self.id)
                     print "D %s" %(nonlocalnode.volpath)
@@ -143,7 +146,7 @@ class LtrBox(LtrUri,Document):
                 newnode = LtrNode().new(node.id)
 
                 if not self.id in newnode.present:
-                    newnode.updateDrop(newdrop)
+                    newnode.updateDrop(newdrop,dryrun=dryrun)
                     newnode.present.append(self.id)
                     print "N %s" %(newdrop.volpath)
                     updates.append(newnode)
@@ -156,8 +159,8 @@ class LtrBox(LtrUri,Document):
             self.space.records.update(updates)
 
         if len(updates):
-            import pprint
-            pprint.pprint(updates)
+            #import pprint
+            #pprint.pprint(updates)
             return True
         else:
             return False
