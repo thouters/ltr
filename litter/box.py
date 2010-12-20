@@ -15,7 +15,7 @@ class LtrBox(LtrUri,Document):
     rootnode = TextField()
 
     def __repr__(self):
-        s = "<ltrbox %s/%s >" % (self.space.name,self.name)
+        s = "<ltrbox %s/%s >" % (self.space.name,self.id)
         return s
 
     def __init__(self,space=False):

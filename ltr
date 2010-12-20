@@ -69,6 +69,18 @@ if __name__ == "__main__":
 
         dstbox.pull(srcbox,dryrun=dryrun)
 
+    if cmd == "branch" or cmd == "box":
+        box = LtrSpace.fromCookie(os.getcwd())
+        bn= box.space.getBoxNames()
+        def check(test,compare):
+            if test==compare:
+                return "* "
+            else:
+                return "  "
+        for boxname in bn:
+            print check(boxname,box.id),boxname
+
+
     if cmd == "ls":
         thisbox = LtrSpace.fromCookie(os.getcwd())
         if len(opts):

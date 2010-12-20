@@ -55,6 +55,9 @@ class LtrSpace(LtrUri):
     def getBox(self,boxname):
         return LtrBox.load(self.records,boxname).setSpace(self)
 
+    def getBoxNames(self):
+        return map(lambda x: x.setSpace(self).id,list(LtrBox.view(self.records,"ltrcrawler/boxes")))
+
     @classmethod
     def fromCookie(cls,path,space=False):
         #find cookie
