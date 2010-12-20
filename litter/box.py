@@ -4,6 +4,7 @@ from drop import LtrDrop
 from uri import LtrUri
 from node import LtrNode
 from couchdb.mapping import *
+import shutil
 import sys
 
 class LtrCookieException(Exception):
@@ -90,16 +91,55 @@ class LtrBox(LtrUri,Document):
 
     def pull(self,srcbox,startNode=False,dryrun=True):
         print "ltr: pull ", srcbox.path
-        for src in []:
-            print "cp %s %s " % (src,dst)
-            if not dryrun:
-                try:
-                    shutil.copy2(src,dst)
-                    drop.record["present"].append(self.name)
-                    updates.append(drop)
-                except:
-                    print "error"
-        return False
+        treeQueue=[]
+        updates = []
+        if startNode == False:
+            startNode = self.getRootNode()
+
+        #print startNode
+        treeQueue.append(startNode)
+
+        while len(treeQueue):
+            node= treeQueue.pop(0)
+            nodes = node.children()
+            #nodes = dict(map(lambda node: (node.name,node),nodes))
+        
+            wanted = filter(lambda n: \
+                self.id not in n.present and srcbox.id in n.present \
+                ,nodes)
+
+            for node in wanted:
+                volpath = node.getVolPath()
+                src = os.path.join(srcbox.path,volpath.strip('/'))
+                dst = os.path.join(self.path,volpath.strip('/'))
+                if node.meta.ftype != "dir":
+                    print "cp %s %s " % (src,dst)
+                    if not dryrun:
+                        shutil.copy2(src,dst)
+                        try:
+                            shutil.copy2(src,dst)
+                        except:
+                            print "error"
+                else:
+                    print "mkdir %s " % dst
+                    if not dryrun:
+                        os.mkdir(dst)
+                    treeQueue.append(node)
+
+                node.present.append(self.id)
+                updates.append(node)
+
+        if not dryrun:
+            print "." * len(updates)
+            self.space.records.update(updates)
+
+        if len(updates):
+            #import pprint
+            #pprint.pprint(updates)
+            return True
+        else:
+            return False
+
 
     def commit(self,startNode=False,dryrun=True):
         def show(x):

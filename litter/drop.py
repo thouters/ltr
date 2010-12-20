@@ -78,7 +78,7 @@ class LtrDrop(LtrUri):
             h = h.hexdigest()
         else:
             import subprocess
-            p = subprocess.Popen("sha1sum \"%s\""%self.diskpath, shell=True, stdout=subprocess.PIPE)
+            p = subprocess.Popen(["sha1sum",self.diskpath], shell=False,stdout=subprocess.PIPE)
             h, filename = p.communicate()[0].split(" ",1)
             #f = open(self.diskpath)
             #h.update(f.read())
