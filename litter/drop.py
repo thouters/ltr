@@ -7,12 +7,12 @@ from uri import LtrUri
 
 
 class LtrDrop(LtrUri):
-    def __init__(self):
-        self.record = {}
+    def __init__(self,name=False,parentdrop=False):
         self.ignoreFileName=".ltrignore"
+        if name == False:
+            self.ftype = ""
+            return
 
-    def fromDisk(self,name,parentdrop=False):
-        """ """
         if parentdrop:
             self.parent = parentdrop
             self.volroot = self.parent.volroot
@@ -26,7 +26,6 @@ class LtrDrop(LtrUri):
             self.path="/"
             self.volpath="/"
             self.name=""
-            #self.record["_id"] = "ROOT"
    
         if isfile(self.diskpath):
             self.ftype = "file"
@@ -43,15 +42,6 @@ class LtrDrop(LtrUri):
         st = stat(self.diskpath)
         self.mtime = int(st.st_mtime)
         self.size = st.st_size
-        return self
-
-    def fromDoc(self,parent,doc):
-        self.parent = parent
-        self.record = doc
-        self.name = doc["name"]
-        self.volpath = join(parent.volpath,self.name)
-        return self
-
 
     def children(self):
         if self.ftype != "dir":
@@ -75,7 +65,7 @@ class LtrDrop(LtrUri):
             for ignore in ignores:
                 if ignore in names:
                     names.remove(ignore)
-        return map(lambda n: LtrDrop().fromDisk(n,self),names)
+        return map(lambda n: LtrDrop(n,self),names)
 
 
     def calcHash(self):
@@ -141,14 +131,14 @@ class LtrFileTest(unittest.TestCase):
         f.write("xyz")
         f.close()
 
-        self.dropbox = LtrDrop().fromDisk(self.tempdir)
+        self.dropbox = LtrDrop(self.tempdir)
 
     def testMime(self):
-        a = LtrDrop().fromDisk(self.pngfile,self.dropbox) 
+        a = LtrDrop(self.pngfile,self.dropbox) 
         self.assertEqual(a.calcMime(),"image/png")
 
     def testSize(self):
-        a = LtrDrop().fromDisk(self.pngfile,self.dropbox) 
+        a = LtrDrop(self.pngfile,self.dropbox) 
         self.assertEqual(a.size,self.tinypngsize)
 
     def testHash(self):

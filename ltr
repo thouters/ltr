@@ -31,7 +31,11 @@ if __name__ == "__main__":
         src = opts.pop(0).strip()
         dst = opts.pop(0).strip()
 
-        srcbox = LtrSpace.fromCookie(src)
+        if os.path.isdir(src):
+            srcbox = LtrSpace.fromCookie(src)
+        else:
+            space = LtrSpace().setUri(src)
+            srcbox = space.getBox(space.boxname)
         
         dstbox = LtrBox(srcbox.space)
         dstbox.setPath(dst)
@@ -69,14 +73,14 @@ if __name__ == "__main__":
         thisbox = LtrSpace.fromCookie(os.getcwd())
         if len(opts):
             boxid = opts.pop(0)
-            box = LtrBox.getInstance(thisbox.space,thisbox.space.getBoxUri(boxid))
+            box = thisbox.space.getBox(boxid)
         else:
             box = thisbox
  
         if box.cwd:
-            f = box.cwd
+            raise Exception("getNode")
         else:
-            f = box.dropbox
+            f = box.getRootNode()
 
         print "\n".join(map(lambda x: x.name, f.children()))
 

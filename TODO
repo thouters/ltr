@@ -1,5 +1,8 @@
 
-make ltr commit crawl all the way into new directories
+clone from URL
+pull
+
+
 
 ltr: "checkout file"
 ltr: "diff . boxname" command

@@ -66,7 +66,7 @@ class LtrBox(LtrUri,Document):
 
     def setPath(self,path):
         self.path = path
-        self.dropbox = LtrDrop().fromDisk(path)
+        self.dropbox = LtrDrop(path)
 
     def writeCookie(self,path=False):
         if path:
@@ -120,7 +120,6 @@ class LtrBox(LtrUri,Document):
             nodes = dict(map(lambda node: (node.name,node),nodes))
             drops = dict(map(lambda drop: (drop.name,drop),drops))
 
-            #allkeys = set(drops.keys()) | set(nodes.keys())
             newkeys = set(drops.keys()) - set(nodes.keys())
             lesskeys = set(nodes.keys()) - set(drops.keys())
             staykeys = set(nodes.keys()) & set(drops.keys())
