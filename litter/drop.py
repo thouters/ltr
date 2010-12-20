@@ -56,7 +56,7 @@ class LtrDrop(LtrUri):
     def children(self):
         if self.ftype != "dir":
             return []
-        if ismount(self.diskpath):
+        if ismount(self.diskpath) and self.volpath !="":
             print "ltr: skip mount ", self.diskpath
             return []
         names = listdir(self.diskpath)
@@ -82,12 +82,17 @@ class LtrDrop(LtrUri):
         """ calculate sha1sum of file contents self.diskpath """
         if isdir(self.diskpath):
             return ""
-        f = open(self.diskpath)
-        h = hashlib.sha1()
-        #print "ltr: digest ", self.diskpath
-        h.update(f.read())
-        h = h.hexdigest()
-        f.close()
+        if islink(self.diskpath):
+            h = hashlib.sha1()
+            h.update(os.readlink(self.diskpath))
+            h = h.hexdigest()
+        else:
+            import subprocess
+            p = subprocess.Popen("sha1sum \"%s\""%self.diskpath, shell=True, stdout=subprocess.PIPE)
+            h, filename = p.communicate()[0].split(" ",1)
+            #f = open(self.diskpath)
+            #h.update(f.read())
+            #f.close()
         return h
 
     def calcMime(self):

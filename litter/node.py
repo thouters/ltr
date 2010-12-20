@@ -1,4 +1,5 @@
 from couchdb.mapping import *
+import os.path
 
 import uuid
 
@@ -27,10 +28,7 @@ class LtrNode(Document):
         self.parentobj = parentobj
         self.space = space
 
-    def connect(self,space,parentobj=None):
-        self.parentobj = parentobj
-        self.space = space
-        return self
+
     def getParentObj(self):
         return self.parentobj
 
@@ -59,6 +57,17 @@ class LtrNode(Document):
             return []
         global_files = list(LtrNode.view(self.space.records,"ltrcrawler/children",key=self.id,include_docs=True))
         return map(lambda x: x.connect(self.space,self),global_files)
+
+    def connect(self,space,parentobj=False):
+        self.parentobj = parentobj
+        self.space = space
+        return self
+
+    def getVolPath(self):
+        if self.parentobj == False:
+            return "/"
+        else:
+            return os.path.join(self.parentobj.getVolPath(),self.name)
 
     def diff(self,drop):
         """ compare mtime, size etc """

@@ -62,8 +62,7 @@ class LtrBox(LtrUri,Document):
         return child
 
     def getRootNode(self):
-        return LtrNode.load(self.space.records,self.rootnode).connect(self.space,self)
-
+        return LtrNode.load(self.space.records,self.rootnode).connect(self.space,False)
 
     def setPath(self,path):
         self.path = path
@@ -143,7 +142,7 @@ class LtrBox(LtrUri,Document):
                     treeQueue.append((LtrDrop(),nonlocalnode))
                 if self.id in nonlocalnode.present:
                     nonlocalnode.present.remove(self.id)
-                    show("D %s\n" %(nonlocalnode.volpath))
+                    show("D %s\n" %(nonlocalnode.getVolPath()))
                     updates.append(nonlocalnode)
 
             for newdrop in map(lambda x:drops.get(x),newkeys):
