@@ -170,7 +170,7 @@ class LtrBox(LtrUri,Document):
                 diff  = localnode.diff(localdrop)
                 if diff != []:
                     show("M %s %s\n" %(localdrop.volpath,diff))
-                    show("[ updateDrop %s ]" % localdrop.volpath )
+                    show("[ updateDrop %s ]" % localdrop.name )
                     localnode.updateDrop(localdrop)
                     updates.append(localnode)
                 if localnode.meta.ftype == "dir":

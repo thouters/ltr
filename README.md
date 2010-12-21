@@ -1,22 +1,23 @@
 # Litter
 
-Decentralised personal file distribution (on a redundant array of inexpensive laptops).
+Decentralised personal file distribution (on a redundant array of inexpensive laptops and archive disks).
 
-I created Litter (`Ltr` henceforward) to be a personal Dropbox/Ubuntu One.
-Initially targetted at power users, and build to feel familiar for shell users.
-Using technologies like ssh and scp's user@host:/path uri's. 
+I created Litter (`Ltr` henceforward) to be a more personal Dropbox/UbuntuOne/... .
+Initially targetted at power users, built to feel familiar for shell users.
+For instance it uses user@host:/path uri's and ssh for network file access.
 
 Ltr uses a filesystem crawler in python to correlate files from a local folder
 against the index of the volume (the `LtrSpace`) to which they belong.
 
-The only file operations ltr performs are ls, stat, file --mime, sha1sum, copy,
-rm, mv.  No copies of your files, other than the ones you work on in (various)
-LtrBox-es are kept behind the scenes or in databases (yes, very much unlike svn
-and git).
-
 A `LtrBox` is such an instance of a LtrSpace, and contains some or all files in
 the LtrSpace.  The state of all LtrBox-es is stored in a CouchDB database,
 which is replicated between the LtrBox-keeping hosts.
+
+The only file operations ltr performs are ls, stat, file --mime, sha1sum, copy,
+rm, mv.  No copies of your files, other than the ones you work on in (various)
+LtrBox-es are kept behind the scenes or in databases, which is very unlike
+svn and git).
+
 
 Having the full file index on every host allows you to examine/navigate the
 directory listings of your disks, when they are not mounted on your system.
@@ -79,6 +80,7 @@ info:
 * L lost (last copy disapeared)
 * w wanted (queued)
 * D discarded (ltr rm)
+* M modified
 
 ### ltr commit
 
@@ -118,5 +120,5 @@ info:
 ## Roadmap
 
 * checking off the TODO file
-* using pamaramiko for network transparency (ssh)
+* using python-paramiko for network transparency (ssh)
 * moving to python-twisted 
