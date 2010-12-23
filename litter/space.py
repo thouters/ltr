@@ -1,6 +1,7 @@
 import couchdb
 from uri import LtrUri
 from box import LtrBox
+from node import LtrNode
 import os
 from os.path import isfile
 
@@ -9,7 +10,7 @@ views = {
     'by-hash': { 'map': "function(doc) { if (doc.doctype == \"node\" && doc.meta.hash) emit(doc.meta.hash, doc); }" },
     'children': { 'map': "function(doc) { if (doc.doctype == \"node\") emit(doc.parent, doc._id); }"},
     'path': { 'map': "function(doc) { if (doc.doctype == \"node\") emit([doc.parent, doc.name],null); }"},
-    'tree': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.meta.ftype==\"dir\") emit(doc.meta.path, doc._id); }" },
+    'tree': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.meta.ftype==\"dir\") emit(doc.meta.path); }" },
 }
 
 class LtrSpace(LtrUri):
@@ -30,7 +31,10 @@ class LtrSpace(LtrUri):
         print "ltr: push design docs ", self.name
         self.records = self.getCursor()[self.name]
         self.records.update([couchdb.Document(_id='_design/ltrcrawler', language='javascript', views=views)])
-        self.records.update([{"_id":"ROOT"}])
+        root = LtrNode()
+        root.id = "ROOT"
+        root.meta.path="/"
+        self.records.update([root])
         return self
 
     def setUri(self,uri):

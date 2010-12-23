@@ -59,7 +59,7 @@ if __name__ == "__main__":
         fname = opts.pop(0)
         node = box.getDrop(fname)
         if node != None:
-            print node.stat()
+            print node.stat(),
 
     if cmd == "pull":
         dst = os.getcwd()

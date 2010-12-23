@@ -49,17 +49,21 @@ class LtrBox(LtrUri,Document):
         dirpath = fullvolpath[0:-len(fname)]
         #query view to get parent
         if dirpath=="/":
-            qpath="ROOT"
+            x= LtrNode()
+            x.id = "ROOT"
+            parent=[x]
         else:
             qpath=dirpath
-        parent= list(LtrNode.view(self.space.records,"ltrcrawler/tree",key=qpath))
+            parent= list(LtrNode.view(self.space.records,"ltrcrawler/tree",key=qpath,include_docs=True))
         if 0==len(parent):
-            child=None
+            node=None
         else:
             parent = parent[0]
-            child= list(LtrNode.view(self.space.records,"ltrcrawler/by-parent",key=[parent._id,fname]))
-            child.setParent(parent)
-        return child
+            k = [parent.id,fname]
+            node= list(LtrNode.view(self.space.records,"ltrcrawler/path",key=k,include_docs=True))
+            node = node[0]
+            node.connect(self.space,parent)
+        return node
 
     def getRootNode(self):
         return LtrNode.load(self.space.records,self.rootnode).connect(self.space,False)

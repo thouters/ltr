@@ -8,8 +8,10 @@ class LtrNode(Document):
     name = TextField()
     parent = TextField()
     meta = DictField(Mapping.build(
+        path = TextField(),
         ftype = TextField(),
         hash = TextField(),
+        mimetype = TextField(),
         mtime = IntegerField(),
         size = IntegerField()
         ))
@@ -44,6 +46,8 @@ class LtrNode(Document):
         self.name = drop.name
         self.meta.mtime = drop.mtime
         self.meta.ftype= drop.ftype
+        if drop.ftype=="dir":
+            self.meta.path = drop.volpath
         self.meta.size= drop.size
         if dryrun:
             self.meta.hash = ""
@@ -83,11 +87,12 @@ class LtrNode(Document):
         return diffs
 
     def stat(self):
-        s= "File: %s\n" % self.volpath
+        s= "File: %s\n" % self.getVolPath()
         s+= "size: %d\n" % self.meta.size
         s+= "type: %s\n"  % self.meta.ftype
-        s+= "mimetype: %s\n" % self.meta.mime
+        s+= "mimetype: %s\n" % self.meta.mimetype
         s+= "drops: %s\n" % self.present
+        s+= "wanted: %s\n" % self.wanted
         return s
 
 
