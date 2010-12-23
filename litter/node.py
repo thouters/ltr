@@ -69,10 +69,13 @@ class LtrNode(Document):
         return self
 
     def getVolPath(self):
-        if self.parentobj == False:
-            return "/"
+        if self.meta.path:
+            return self.meta.path
         else:
-            return os.path.join(self.parentobj.getVolPath(),self.name)
+            if self.parentobj == False:
+                return "/"
+            else:
+                return os.path.join(self.parentobj.getVolPath(),self.name)
 
     def diff(self,drop):
         """ compare mtime, size etc """

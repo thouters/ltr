@@ -32,7 +32,7 @@ if __name__ == "__main__":
         dst = opts.pop(0).strip()
 
         if os.path.isdir(src):
-            srcbox = LtrSpace.fromCookie(src)
+            srcbox = LtrSpace.boxFromCookie(src)
         else:
             space = LtrSpace().setUri(src)
             srcbox = space.getBox(space.boxname)
@@ -44,33 +44,33 @@ if __name__ == "__main__":
         dstbox.writeCookie()
 
     if cmd == "commit":
-        box = LtrSpace.fromCookie(os.getcwd())
+        box = LtrSpace.boxFromCookie(os.getcwd())
         box.commit(dryrun=False)
 
     if cmd == "diff":
         pass
 
     if cmd == "status":
-        box = LtrSpace.fromCookie(os.getcwd())
+        box = LtrSpace.boxFromCookie(os.getcwd())
         box.commit(dryrun=True)
 
     if cmd == "stat":
-        box = LtrSpace.fromCookie(os.getcwd())
+        box = LtrSpace.boxFromCookie(os.getcwd())
         fname = opts.pop(0)
-        node = box.getDrop(fname)
+        node = box.getDrop(box.pathConv(fname))
         if node != None:
             print node.stat(),
 
     if cmd == "pull":
         dst = os.getcwd()
         src = opts.pop(0)
-        dstbox = LtrSpace.fromCookie(dst)
-        srcbox = LtrSpace.fromCookie(src,space=dstbox.space)
+        dstbox = LtrSpace.boxFromCookie(dst)
+        srcbox = LtrSpace.boxFromCookie(src,space=dstbox.space)
 
         dstbox.pull(srcbox,dryrun=dryrun)
 
     if cmd == "branch" or cmd == "box":
-        box = LtrSpace.fromCookie(os.getcwd())
+        box = LtrSpace.boxFromCookie(os.getcwd())
         bn= box.space.getBoxNames()
         def check(test,compare):
             if test==compare:
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
 
     if cmd == "ls":
-        thisbox = LtrSpace.fromCookie(os.getcwd())
+        thisbox = LtrSpace.boxFromCookie(os.getcwd())
         if len(opts):
             boxid = opts.pop(0)
             box = thisbox.space.getBox(boxid)

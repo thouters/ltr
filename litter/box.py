@@ -44,16 +44,19 @@ class LtrBox(LtrUri,Document):
     def getUri(self):
         return "/".join(self.dbserveruri.strip("/"),self.spacename)
 
+    def pathConv(self,relativetocwd):
+        return os.path.join(self.cwd,relativetocwd)
+
     def getDrop(self,fullvolpath):
         fname = fullvolpath.split("/")[-1]
-        dirpath = fullvolpath[0:-len(fname)]
+        dirpath = fullvolpath[0:-len(fname)] # trailing /
         #query view to get parent
         if dirpath=="/":
             x= LtrNode()
             x.id = "ROOT"
             parent=[x]
         else:
-            qpath=dirpath
+            qpath=dirpath.rstrip("/")
             parent= list(LtrNode.view(self.space.records,"ltrcrawler/tree",key=qpath,include_docs=True))
         if 0==len(parent):
             node=None

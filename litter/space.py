@@ -63,15 +63,16 @@ class LtrSpace(LtrUri):
         return map(lambda x: x.setSpace(self).id,list(LtrBox.view(self.records,"ltrcrawler/boxes")))
 
     @classmethod
-    def fromCookie(cls,path,space=False):
+    def boxFromCookie(cls,path,space=False):
         #find cookie
-        testpath = path 
-        while len(testpath)>1:
-            testfile = os.path.join(testpath,".ltr") 
+        boxroot = path 
+        while len(boxroot)>1:
+            testfile = os.path.join(boxroot,".ltr") 
             if isfile(testfile):
                 break
-            testpath = os.path.dirname(testpath)
-        if len(testpath) == 1:
+            boxroot = os.path.dirname(boxroot)
+
+        if len("/") == len(boxroot):
             raise LtrCookieException("directory not in litter dropbox: %s"%path)
 
         f = open(testfile,'r')
@@ -83,7 +84,10 @@ class LtrSpace(LtrUri):
         uri = LtrUri().setUri(c)
         box = space.getBox(uri.boxname)
 
-        box.cwd = path[len(testpath):]
-        box.setPath(testpath)
+        cwd = path[len(boxroot):]
+        if cwd == "":
+            cwd = "/"
+        box.cwd = cwd
+        box.setPath(boxroot)
         return box
 
