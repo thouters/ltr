@@ -22,6 +22,7 @@ class LtrNode(Document):
         )) 
     )
     present = ListField( TextField())
+    wanted = ListField( TextField())
 
     def __init__(self,parentobj=False,space=False):
         Document.__init__(self)

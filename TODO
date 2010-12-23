@@ -1,11 +1,16 @@
 
 implement box policies
-put box uri in box document
-ltr want file command
+    box Document; .policy, .sftp://uri
+    pull + status display wanted
+    put box uri in box document
+
 ltr update (trigger couchdb replicate)
+
 ltr current working directory diff between two boxes
+
 ltr: "ping boxname" command (attempt to access other box and set it as origin) 
-ltr config key value
+
+ltr config key value (uri,...)
 
 node.present -> create node document for every drop.
 node{ftype=dir} -> documenttype dir

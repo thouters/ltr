@@ -1,5 +1,4 @@
 import os
-from os.path import isfile
 from drop import LtrDrop
 from uri import LtrUri
 from node import LtrNode
@@ -104,9 +103,14 @@ class LtrBox(LtrUri,Document):
             nodes = node.children()
             #nodes = dict(map(lambda node: (node.name,node),nodes))
         
-            wanted = filter(lambda n: \
-                self.id not in n.present and srcbox.id in n.present \
-                ,nodes)
+            if self.policy == "complete":
+                wanted = filter(lambda n: \
+                    self.id not in n.present and srcbox.id in n.present \
+                    ,nodes)
+            elif self.policy == "ondemand":
+                wanted = filter(lambda n: \
+                    self.id not in n.present and srcbox.id in n.wanted \
+                    ,nodes)
 
             for node in wanted:
                 volpath = node.getVolPath()
@@ -183,6 +187,9 @@ class LtrBox(LtrUri,Document):
                     nonlocalnode.present.remove(self.id)
                     show("D %s\n" %(nonlocalnode.getVolPath()))
                     updates.append(nonlocalnode)
+                else:
+                    if self.policy == "complete":
+                        show("w %s\n" %(nonlocalnode.getVolPath()))
 
             for newdrop in map(lambda x:drops.get(x),newkeys):
 
