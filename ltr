@@ -17,6 +17,16 @@ if __name__ == "__main__":
     else:
         cmd = "status"
 
+    if cmd == "help":
+        print "usage: ltr COMMAND [args]"
+        print "The most commonly used ltr commands are:"
+    if cmd == "help":
+        print "    help"
+        print "        show this text"
+    if cmd == "help":
+        print "    create uri directory"
+        print "        creates a database and box"
+        print "        example: create http://localhost:1234/databasename/boxname ."
     if cmd == "create":
         uri = opts.pop(0).strip()
         directory = opts.pop(0)
@@ -26,6 +36,10 @@ if __name__ == "__main__":
         box.setPath(directory)
         box.writeCookie()
 
+    if cmd == "help":
+        print "    clone boxname src dst"
+        print "        create a new ltrbox out of an existing one"
+        print "        example: clone documents-on-usbdrive ~/docs /media/usbdrive/docs"
     if cmd == "clone":
         name = opts.pop(0).strip()
         src = opts.pop(0).strip()
@@ -43,27 +57,45 @@ if __name__ == "__main__":
         dstbox.create()
         dstbox.writeCookie()
 
+    if cmd == "help":
+        print "    commit [-n]"
+        print "        commit changes in dropbox to database"
     if cmd == "commit":
         box = LtrSpace.boxFromCookie(os.getcwd())
         box.commit(dryrun=False)
 
+    if cmd == "help":
+        print "    diff @boxname [@boxname]"
+        print "        compare box indexes for this directory"
     if cmd == "diff":
         pass
 
+    if cmd == "help":
+        print "    status"
+        print "        test accuracy between database and filesystem"
     if cmd == "status":
         box = LtrSpace.boxFromCookie(os.getcwd())
         box.commit(dryrun=True)
 
+    if cmd == "help":
+        print "    show [objectname=this-boxname]"
+        print "        show details of objectname"
     if cmd == "show":
         box = LtrSpace.boxFromCookie(os.getcwd())
         print box.info(),
 
+    if cmd == "help":
+        print "    set objectname.parameter value"
+        print "        set object parameter"
     if cmd == "set":
         box = LtrSpace.boxFromCookie(os.getcwd())
         key = opts.pop(0)
         value = opts.pop(0)
         box.space.setopt(key,value)
 
+    if cmd == "help":
+        print "    stat filename"
+        print "        consult database about filename"
     if cmd == "stat":
         box = LtrSpace.boxFromCookie(os.getcwd())
         fname = opts.pop(0)
@@ -71,6 +103,9 @@ if __name__ == "__main__":
         if node != None:
             print node.stat(),
 
+    if cmd == "help":
+        print "    pull src"
+        print "        retrieve wanted files from peer ltrbox"
     if cmd == "pull":
         dst = os.getcwd()
         src = opts.pop(0)
@@ -79,6 +114,9 @@ if __name__ == "__main__":
 
         dstbox.pull(srcbox,dryrun=dryrun)
 
+    if cmd == "help":
+        print "    box"
+        print "        show list of ltrboxes in this volume"
     if cmd == "branch" or cmd == "box":
         box = LtrSpace.boxFromCookie(os.getcwd())
         bn= box.space.getBoxNames()
@@ -90,7 +128,9 @@ if __name__ == "__main__":
         for boxname in bn:
             print check(boxname,box.id),boxname
 
-
+    if cmd == "help":
+        print "    ls @boxname"
+        print "        show filelist for current directory"
     if cmd == "ls":
         thisbox = LtrSpace.boxFromCookie(os.getcwd())
         if len(opts):
