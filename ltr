@@ -54,6 +54,16 @@ if __name__ == "__main__":
         box = LtrSpace.boxFromCookie(os.getcwd())
         box.commit(dryrun=True)
 
+    if cmd == "show":
+        box = LtrSpace.boxFromCookie(os.getcwd())
+        print box.info(),
+
+    if cmd == "set":
+        box = LtrSpace.boxFromCookie(os.getcwd())
+        key = opts.pop(0)
+        value = opts.pop(0)
+        box.space.setopt(key,value)
+
     if cmd == "stat":
         box = LtrSpace.boxFromCookie(os.getcwd())
         fname = opts.pop(0)
@@ -89,10 +99,6 @@ if __name__ == "__main__":
         else:
             box = thisbox
  
-        if box.cwd:
-            raise Exception("getNode")
-        else:
-            f = box.getRootNode()
-
+        f = box.getDrop(box.pathConv(""))
         print "\n".join(map(lambda x: x.name, f.children()))
 

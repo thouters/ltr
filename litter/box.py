@@ -13,6 +13,15 @@ class LtrBox(LtrUri,Document):
     doctype = TextField()
     policy = TextField()
     rootnode = TextField()
+    boxurl = TextField()
+    couchurl = TextField()
+
+    def info(self):
+        s = ""
+        s += "policy: %s\n" % self.policy
+        s += "boxurl: %s\n" % self.boxurl
+        s += "couchurl: %s\n" % self.couchurl
+        return s
 
     def __repr__(self):
         s = "<ltrbox %s/%s >" % (self.space.name,self.id)

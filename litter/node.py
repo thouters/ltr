@@ -69,7 +69,7 @@ class LtrNode(Document):
         return self
 
     def getVolPath(self):
-        if self.meta.path:
+        if "path" in self.meta:
             return self.meta.path
         else:
             if self.parentobj == False:

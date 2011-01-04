@@ -1,10 +1,22 @@
-
 implement box policies
     box Document; .policy, .sftp://uri
-    pull + status display wanted
     put box uri in box document
+    + info
+
+ltrDir: id:hash(path)
+        depth: n
+        path: /a/b/c
+ltrNode:    
+        parent: id-of(ltrDir)
+    
+
+pull + status display wanted
 
 ltr update (trigger couchdb replicate)
+
+log:
+    node{}
+        updates: {"{{timestamp}}":[{"type":"edit"},{}]}
 
 ltr current working directory diff between two boxes
 

@@ -91,3 +91,9 @@ class LtrSpace(LtrUri):
         box.setPath(boxroot)
         return box
 
+    def setopt(self,key,value):
+        (docname,keyname)=key.split(".")
+        d = LtrBox.load(self.records,docname)
+        setattr(d,keyname,value)
+        d.store(self.records)
+
