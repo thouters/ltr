@@ -14,7 +14,7 @@ class LtrUri:
         if len(pieces):
             self.http = pieces.pop(0)
         if len(pieces):
-            slashslash = pieces.pop(0)
+            pieces.pop(0) #slashslash 
         if len(pieces):
             self.setDbservername(pieces.pop(0))
         if len(pieces):

@@ -2,15 +2,13 @@ import os
 from drop import LtrDrop
 from uri import LtrUri
 from node import LtrNode
-from couchdb.mapping import *
+from couchdb.mapping import TextField
 import shutil
 import sys
+import uuid
 
-class LtrCookieException(Exception):
-    pass
 
-class LtrBox(LtrUri,Document):
-    doctype = TextField()
+class LtrBox(LtrUri,LtrNode):
     policy = TextField()
     rootnode = TextField()
     boxurl = TextField()
@@ -28,13 +26,12 @@ class LtrBox(LtrUri,Document):
         return s
 
     def __init__(self,space=False):
-        Document.__init__(self)
+        LtrNode.__init__(self)
         self.record = False
         self.name = False
         self.dropbox = False
         self.space = False
         self.uri=False
-        self.path = False
         self.cwd = False #set drop in loadcookie()
 
         if space:
@@ -132,7 +129,7 @@ class LtrBox(LtrUri,Document):
                 volpath = node.getVolPath()
                 src = os.path.join(srcbox.path,volpath.strip('/'))
                 dst = os.path.join(self.path,volpath.strip('/'))
-                if node.meta.ftype != "dir":
+                if node.ftype != "dir":
                     print "cp %s %s " % (src,dst)
                     if not dryrun:
                         shutil.copy2(src,dst)
@@ -191,13 +188,14 @@ class LtrBox(LtrUri,Document):
                 if diff != []:
                     show("M %s %s\n" %(localdrop.volpath,diff))
                     show("[ updateDrop %s ]" % localdrop.name )
+                    localnode.boxid = self.id
                     localnode.updateDrop(localdrop)
                     updates.append(localnode)
-                if localnode.meta.ftype == "dir":
+                if localnode.ftype == "dir":
                     treeQueue.append((localdrop,localnode))
 
             for nonlocalnode in map(lambda x:nodes.get(x),lesskeys):
-                if nonlocalnode.meta.ftype == "dir":
+                if nonlocalnode.ftype == "dir":
                     treeQueue.append((LtrDrop(),nonlocalnode))
                 if self.id in nonlocalnode.present:
                     nonlocalnode.present.remove(self.id)

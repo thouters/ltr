@@ -1,7 +1,7 @@
 from os.path import isfile, isdir, islink, ismount, join
 import hashlib
 import subprocess
-from os import listdir, stat
+from os import listdir, stat, readlink
 import unittest
 from uri import LtrUri
 
@@ -74,10 +74,9 @@ class LtrDrop(LtrUri):
             return ""
         if islink(self.diskpath):
             h = hashlib.sha1()
-            h.update(os.readlink(self.diskpath))
+            h.update(readlink(self.diskpath))
             h = h.hexdigest()
         else:
-            import subprocess
             p = subprocess.Popen(["sha1sum",self.diskpath], shell=False,stdout=subprocess.PIPE)
             h, filename = p.communicate()[0].split(" ",1)
             #f = open(self.diskpath)

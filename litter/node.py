@@ -1,36 +1,38 @@
-from couchdb.mapping import *
+from couchdb.mapping import Document,TextField,DateTimeField, \
+IntegerField,BooleanField,ListField,DictField,Mapping
 import os.path
-
 import uuid
 
 class LtrNode(Document):
     doctype = TextField()
+
     name = TextField()
+    path = TextField()
     parent = TextField()
-    meta = DictField(Mapping.build(
-        path = TextField(),
-        ftype = TextField(),
-        hash = TextField(),
-        mimetype = TextField(),
-        mtime = IntegerField(),
-        size = IntegerField()
-        ))
-    delta = ListField( DictField(Mapping.build(
-        boxid = TextField(),
-        ftype = TextField(),
-        hash = TextField(),
-        mtime = IntegerField(),
-        size = IntegerField()
-        )) 
-    )
-    present = ListField( TextField())
-    wanted = ListField( TextField())
+    boxid = TextField()
+    addtime = DateTimeField()
+
+    ftype = TextField()
+    hash = TextField()
+    mimetype = TextField()
+    ctime = DateTimeField()
+    mtime = IntegerField()
+    size = IntegerField()
+
+    isbox = BooleanField()
+    present = ListField(TextField())
+    wanted = BooleanField()
+
+    log = ListField(DictField(Mapping.build(  \
+                            dt = DateTimeField(),
+                            etype = TextField(),
+                            old = TextField(),
+                            new = TextField() )))
 
     def __init__(self,parentobj=False,space=False):
         Document.__init__(self)
         self.parentobj = parentobj
         self.space = space
-
 
     def getParentObj(self):
         return self.parentobj
@@ -44,17 +46,17 @@ class LtrNode(Document):
     def updateDrop(self,drop,dryrun=False):
         """ use drop.calcHash, .boxid to update record"""
         self.name = drop.name
-        self.meta.mtime = drop.mtime
-        self.meta.ftype= drop.ftype
+        self.mtime = drop.mtime
+        self.ftype= drop.ftype
         if drop.ftype=="dir":
-            self.meta.path = drop.volpath
-        self.meta.size= drop.size
+            self.path = drop.volpath
+        self.size= drop.size
         if dryrun:
-            self.meta.hash = ""
-            self.meta.mimetype = ""
+            self.hash = ""
+            self.mimetype = ""
         else:
-            self.meta.hash = drop.calcHash()
-            self.meta.mimetype = drop.calcMime()
+            self.hash = drop.calcHash()
+            self.mimetype = drop.calcMime()
         self.delta = []
         
     def children(self):
@@ -69,8 +71,8 @@ class LtrNode(Document):
         return self
 
     def getVolPath(self):
-        if "path" in self.meta:
-            return self.meta.path
+        if self.path:
+            return self.path
         else:
             if self.parentobj == False:
                 return "/"
@@ -83,7 +85,7 @@ class LtrNode(Document):
 #        sys.exit(0)
         diffs = []
         for attr in drop.features:
-            (a,b) = (self.meta[attr],getattr(drop,attr))
+            (a,b) = (getattr(self,attr),getattr(drop,attr))
             if a != b:
                 diffs.append((attr,a,b))
 
@@ -91,10 +93,14 @@ class LtrNode(Document):
 
     def stat(self):
         s= "File: %s\n" % self.getVolPath()
-        s+= "size: %d\n" % self.meta.size
-        s+= "type: %s\n"  % self.meta.ftype
-        s+= "mimetype: %s\n" % self.meta.mimetype
-        s+= "drops: %s\n" % self.present
+        s+= "inode: %s\n" % self.id
+        s+= "boxid: %s\n" % self.boxid
+        s+= "size: %d\n" % self.size
+        s+= "type: %s\n"  % self.ftype
+        s+= "mimetype: %s\n" % self.mimetype
+        s+= "sha1sum: %s\n" % self.hash
+        s+= "present: %s\n" % self.present
+        s+= "isbox: %s\n" % self.isbox
         s+= "wanted: %s\n" % self.wanted
         return s
 

@@ -96,6 +96,7 @@ if __name__ == "__main__":
     if cmd == "help":
         print "    stat filename"
         print "        consult database about filename"
+        # matchlist=space.stat(globpattern,box=currentbox)
     if cmd == "stat":
         box = LtrSpace.boxFromCookie(os.getcwd())
         fname = opts.pop(0)

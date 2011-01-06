@@ -7,11 +7,14 @@ from os.path import isfile
 
 views = {
     'boxes': { 'map': "function(doc) { if (doc.doctype == \"box\") emit(doc._id,doc); }"},
-    'by-hash': { 'map': "function(doc) { if (doc.doctype == \"node\" && doc.meta.hash) emit(doc.meta.hash, doc); }" },
+    'by-hash': { 'map': "function(doc) { if (doc.doctype == \"node\" && doc.hash) emit(doc.hash, doc); }" },
     'children': { 'map': "function(doc) { if (doc.doctype == \"node\") emit(doc.parent, doc._id); }"},
     'path': { 'map': "function(doc) { if (doc.doctype == \"node\") emit([doc.parent, doc.name],null); }"},
-    'tree': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.meta.ftype==\"dir\") emit(doc.meta.path); }" },
+    'tree': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.ftype==\"dir\") emit(doc.path); }" },
 }
+
+class LtrCookieException(Exception):
+    pass
 
 class LtrSpace(LtrUri):
     def __init__(self):
@@ -33,7 +36,7 @@ class LtrSpace(LtrUri):
         self.records.update([couchdb.Document(_id='_design/ltrcrawler', language='javascript', views=views)])
         root = LtrNode()
         root.id = "ROOT"
-        root.meta.path="/"
+        root.path="/"
         self.records.update([root])
         return self
 

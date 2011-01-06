@@ -3,39 +3,36 @@ implement box policies
     put box uri in box document
     + info
 
+LtrUri isoleren
+
 ltrDir: id:hash(path)
         depth: n
         path: /a/b/c
+        parent: id-of(parent)
 ltrNode:    
         parent: id-of(ltrDir)
     
+view-tree-example:
+    key=[parent,fname], value=boxid
 
-pull + status display wanted
 
+node-logentry-example:
+    doctype: node
+    log: {"{{timestamp}}":[{"type":"edit"},{}]}
+
+log-view-summary-example:
+    ([timestamp,boxid],[fileid,action])
+    
+
+ltr diff
 ltr update (trigger couchdb replicate)
-
-log:
-    node{}
-        updates: {"{{timestamp}}":[{"type":"edit"},{}]}
-
-ltr current working directory diff between two boxes
-
 ltr: "ping boxname" command (attempt to access other box and set it as origin) 
 
-ltr config key value (uri,...)
-
 node.present -> create node document for every drop.
-node{ftype=dir} -> documenttype dir
-
-.ltr in yaml; list of remote repositories, git style
-    uri: http://blabla
-    remotes:
-        origin: thomas@otherhost:/path-to-folder
-        backup-1: /mnt/backupdisk
+node{ftype=dir} -> documenttype node
 
 ltrbox crawler: generic api to be shared between pull and index
 ltrbox crawler: unittests
-ltrbox property: --policy: ondemand/complete/skeleton
 document: pull request: {ctime, status, uri=user@host:/path}
 client: wait on _changes for pull requests
 ltr: node attribute 'missing'; missing.append(boxname) for boxname if boxname.policy == complete
