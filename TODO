@@ -1,20 +1,7 @@
-implement box policies
-    box Document; .policy, .sftp://uri
-    put box uri in box document
-    + info
-
 LtrUri isoleren
 
-ltrDir: id:hash(path)
-        depth: n
-        path: /a/b/c
-        parent: id-of(parent)
-ltrNode:    
-        parent: id-of(ltrDir)
-    
 view-tree-example:
     key=[parent,fname], value=boxid
-
 
 node-logentry-example:
     doctype: node
@@ -23,6 +10,7 @@ node-logentry-example:
 log-view-summary-example:
     ([timestamp,boxid],[fileid,action])
     
+make parent a path
 
 ltr diff
 ltr update (trigger couchdb replicate)

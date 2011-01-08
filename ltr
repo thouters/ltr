@@ -1,49 +1,84 @@
 #!/usr/bin/env python
-from sys import argv
 from litter import LtrSpace, LtrBox
 import os
+import argparse
+import sys
 
-if __name__ == "__main__":
-    
-    dryrun = False
-    opts = argv
-    opts.pop(0)
-    if len(argv):
-        if "-n" in opts:
-            dryrun = True
-            print "performing dryrun"
-            opts.remove("-n")
-        cmd = opts.pop(0)
-    else:
-        cmd = "status"
+class LtrCli:
+    def __init__(self,argv):
+        parser = argparse.ArgumentParser(description="ltr - Decentralised personal file distribution",prog='ltr')
+        parser.add_argument('-n','--dryrun',help='dryrun',action="store_true")
 
-    if cmd == "help":
-        print "usage: ltr COMMAND [args]"
-        print "The most commonly used ltr commands are:"
-    if cmd == "help":
-        print "    help"
-        print "        show this text"
-    if cmd == "help":
-        print "    create uri directory"
-        print "        creates a database and box"
-        print "        example: create http://localhost:1234/databasename/boxname ."
-    if cmd == "create":
-        uri = opts.pop(0).strip()
-        directory = opts.pop(0)
+        subparsers = parser.add_subparsers(title="commands")
+
+        default_create_uri = "http://localhost:5984/databasename/boxname"
+
+        create_ = subparsers.add_parser('create',help="creates a new dropbox")
+        create_.add_argument('uri',help="database uri (default: {0})".format(default_create_uri),default=default_create_uri)
+        create_.add_argument('directory',help="directory to convert to dropbox",default=".")
+        create_.set_defaults(func=self.create)
+
+        clone_ = subparsers.add_parser('clone',help="create a new ltrbox out of an existing one")
+        clone_.add_argument('src',help="source path")
+        clone_.add_argument('dst',help="destination (default: .)",default=".")
+        clone_.add_argument('boxname')
+        clone_.set_defaults(func=self.clone)
+
+        pull_ = subparsers.add_parser('pull',help="retrieve wanted files from other ltrbox")
+        pull_.add_argument('src',help="source path")
+        pull_.add_argument('dst',help="destination (default: .)",default=".")
+        pull_.set_defaults(func=self.pull)
+
+        box_ = subparsers.add_parser('box',help="show list of ltrboxes in this volume")
+        box_.set_defaults(func=self.box)
+
+        ls_ = subparsers.add_parser('ls',help="show database filelist")
+        ls_.add_argument('filespec',help="path (default: .)",default=".")
+        ls_.add_argument("-b",'--boxname',help="boxname (default: .)",default=".", action="append")
+        ls_.set_defaults(func=self.ls)
+
+        commit_ = subparsers.add_parser('commit',help="update database with filesystem")
+        commit_.set_defaults(func=self.commit)
+
+        status_ = subparsers.add_parser('status',help="compare filesystem to database")
+        status_.set_defaults(func=self.status)
+
+        diff_ = subparsers.add_parser('diff',help="compare files between boxes")
+        diff_.add_argument('filespec',help="file to run compare on (default: .)",default=".")
+        #FIXME: @box1 @box2 @box3
+        diff_.add_argument('box1',help="first box for comparison (default: .)",default=".")
+        diff_.add_argument('box2',help="second box for comparison")
+        diff_.set_defaults(func=self.diff)
+
+        show_ = subparsers.add_parser('show',help="show information on object")
+        show_.add_argument('object',help="object (default: .)",default=".")
+        show_.set_defaults(func=self.show)
+
+        set_ = subparsers.add_parser('set',help="set object parameter")
+        set_.add_argument('key',help="key (example: boxname.url)")
+        set_.add_argument('value',help="value")
+        set_.set_defaults(func=self.set)
+
+        stat_ = subparsers.add_parser('stat',help="consult database about filename")
+        stat_.add_argument('filename')
+        stat_.set_defaults(func=self.stat)
+
+        args = parser.parse_args(argv)
+        args.func(args)
+
+    def create(self,args):
+        uri = args.uri.strip()
+        directory = args.directory.strip()
         space = LtrSpace().createfromUri(uri)
         box = LtrBox(space).setUri(uri)
         box.create()
         box.setPath(directory)
         box.writeCookie()
 
-    if cmd == "help":
-        print "    clone boxname src dst"
-        print "        create a new ltrbox out of an existing one"
-        print "        example: clone documents-on-usbdrive ~/docs /media/usbdrive/docs"
-    if cmd == "clone":
-        name = opts.pop(0).strip()
-        src = opts.pop(0).strip()
-        dst = opts.pop(0).strip()
+    def clone(self,args):
+        name = args.boxname.strip()
+        src = args.src.strip()
+        dst = args.dst.strip()
 
         if os.path.isdir(src):
             srcbox = LtrSpace.boxFromCookie(src)
@@ -57,68 +92,43 @@ if __name__ == "__main__":
         dstbox.create()
         dstbox.writeCookie()
 
-    if cmd == "help":
-        print "    commit [-n]"
-        print "        commit changes in dropbox to database"
-    if cmd == "commit":
+    def commit(self,args):
         box = LtrSpace.boxFromCookie(os.getcwd())
         box.commit(dryrun=False)
 
-    if cmd == "help":
-        print "    diff @boxname [@boxname]"
-        print "        compare box indexes for this directory"
-    if cmd == "diff":
-        pass
+    def diff(self,args):
+        pass 
 
-    if cmd == "help":
-        print "    status"
-        print "        test accuracy between database and filesystem"
-    if cmd == "status":
+    def status(self,args):
         box = LtrSpace.boxFromCookie(os.getcwd())
         box.commit(dryrun=True)
 
-    if cmd == "help":
-        print "    show [objectname=this-boxname]"
-        print "        show details of objectname"
-    if cmd == "show":
+    def show(self,args):
         box = LtrSpace.boxFromCookie(os.getcwd())
         print box.info(),
 
-    if cmd == "help":
-        print "    set objectname.parameter value"
-        print "        set object parameter"
-    if cmd == "set":
+    def set(self,args):
         box = LtrSpace.boxFromCookie(os.getcwd())
-        key = opts.pop(0)
-        value = opts.pop(0)
+        key = args.key.strip()
+        value = args.value.strip()
         box.space.setopt(key,value)
 
-    if cmd == "help":
-        print "    stat filename"
-        print "        consult database about filename"
-        # matchlist=space.stat(globpattern,box=currentbox)
-    if cmd == "stat":
+    def stat(self,args):
         box = LtrSpace.boxFromCookie(os.getcwd())
-        fname = opts.pop(0)
+        fname = args.filespec.strip()
         node = box.getDrop(box.pathConv(fname))
         if node != None:
             print node.stat(),
 
-    if cmd == "help":
-        print "    pull src"
-        print "        retrieve wanted files from peer ltrbox"
-    if cmd == "pull":
+    def pull(self,args):
         dst = os.getcwd()
-        src = opts.pop(0)
+        src = args.src.strip()
         dstbox = LtrSpace.boxFromCookie(dst)
         srcbox = LtrSpace.boxFromCookie(src,space=dstbox.space)
 
-        dstbox.pull(srcbox,dryrun=dryrun)
+        dstbox.pull(srcbox,dryrun=args.dryrun)
 
-    if cmd == "help":
-        print "    box"
-        print "        show list of ltrboxes in this volume"
-    if cmd == "branch" or cmd == "box":
+    def box(self,args):
         box = LtrSpace.boxFromCookie(os.getcwd())
         bn= box.space.getBoxNames()
         def check(test,compare):
@@ -129,17 +139,17 @@ if __name__ == "__main__":
         for boxname in bn:
             print check(boxname,box.id),boxname
 
-    if cmd == "help":
-        print "    ls @boxname"
-        print "        show filelist for current directory"
-    if cmd == "ls":
+    def ls(self,args):
         thisbox = LtrSpace.boxFromCookie(os.getcwd())
-        if len(opts):
-            boxid = opts.pop(0)
-            box = thisbox.space.getBox(boxid)
-        else:
+        #args.filespec
+        if args.boxname == ".":
             box = thisbox
+        else:
+            boxid = args.boxname
+            box = thisbox.space.getBox(boxid)
  
         f = box.getDrop(box.pathConv(""))
         print "\n".join(map(lambda x: x.name, f.children()))
 
+if __name__ == "__main__":
+    LtrCli(sys.argv[1:])
