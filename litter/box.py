@@ -29,7 +29,6 @@ class LtrBox(LtrUri,LtrNode):
         LtrNode.__init__(self)
         self.record = False
         self.name = False
-        self.dropbox = False
         self.space = False
         self.uri=False
         self.cwd = False #set drop in loadcookie()
@@ -43,7 +42,6 @@ class LtrBox(LtrUri,LtrNode):
 
     def setUri(self,uri):
         LtrUri.setUri(self,uri)
-        self.name = self.boxname
 
         return self
 
@@ -56,22 +54,14 @@ class LtrBox(LtrUri,LtrNode):
     def getDrop(self,fullvolpath):
         fname = fullvolpath.split("/")[-1]
         dirpath = fullvolpath[0:-len(fname)] # trailing /
-        #query view to get parent
-        if dirpath=="/":
-            x= LtrNode()
-            x.id = "ROOT"
-            parent=[x]
-        else:
+        if dirpath!="/":
             qpath=dirpath.rstrip("/")
-            parent= list(LtrNode.view(self.space.records,"ltrcrawler/tree",key=qpath,include_docs=True))
-        if 0==len(parent):
-            node=None
-        else:
-            parent = parent[0]
-            k = [parent.id,fname]
-            node= list(LtrNode.view(self.space.records,"ltrcrawler/path",key=k,include_docs=True))
-            node = node[0]
-            node.connect(self.space,parent)
+        nodes = list(LtrNode.view(self.space.records,"ltrcrawler/path",key=[qpath,fname],include_docs=True))
+        nodes = filter(lambda x: x.boxname == self.id,nodes)
+        if 0==len(nodes):
+            return None
+        node = nodes[0]
+        node.connect(self.space)
         return node
 
     def getRootNode(self):
@@ -79,34 +69,26 @@ class LtrBox(LtrUri,LtrNode):
 
     def setPath(self,path):
         self.path = path
-        self.dropbox = LtrDrop(path)
 
     def writeCookie(self,path=False):
         if path:
-            self.setPath(path)
+            self.fspath = path
         #FIXME: verify fileexists
-        f = open(os.path.join(self.path,".ltr"),'w')
+        f = open(os.path.join(self.fspath,".ltr"),'w')
         f.write(self.boxuri)
         f.close()
-        print "ltr: wrote cookie for ", self.name
+        print "ltr: wrote cookie for ", self.boxname
 
     def setName(self,name=""):
-        if name=="":
-            if self.boxname:
-                self.name = self.boxname
-            else:
-                self.name = uuid.uuid4().hex
-        else:
-            self.name = name
-
-        self.boxuri = self.space.getBoxUri(self.name)
+        self.boxname = name
+        self.boxuri = self.space.getBoxUri(self.boxname)
 
     def pull(self,srcbox,startNode=False,dryrun=True):
         print "ltr: pull ", srcbox.path
         treeQueue=[]
         updates = []
         if startNode == False:
-            startNode = self.getRootNode()
+            startNode = self
 
         #print startNode
         treeQueue.append(startNode)
@@ -126,9 +108,8 @@ class LtrBox(LtrUri,LtrNode):
                     ,nodes)
 
             for node in wanted:
-                volpath = node.getVolPath()
-                src = os.path.join(srcbox.path,volpath.strip('/'))
-                dst = os.path.join(self.path,volpath.strip('/'))
+                src = os.path.join(srcbox.fspath,node.path.strip("/"),node.name)
+                dst = os.path.join(self.fspath,node.path.strip("/"),node.name)
                 if node.ftype != "dir":
                     print "cp %s %s " % (src,dst)
                     if not dryrun:
@@ -165,10 +146,10 @@ class LtrBox(LtrUri,LtrNode):
         treeQueue=[]
         updates = []
         if startNode == False:
-            startNode = self.getRootNode()
+            startNode = self
 
         #print startNode
-        treeQueue.append( (self.dropbox,startNode) )
+        treeQueue.append( (LtrDrop("","/",self.fspath),startNode) )
 
         while len(treeQueue):
             (drop,node)= treeQueue.pop(0)
@@ -188,7 +169,7 @@ class LtrBox(LtrUri,LtrNode):
                 if diff != []:
                     show("M %s %s\n" %(localdrop.volpath,diff))
                     show("[ updateDrop %s ]" % localdrop.name )
-                    localnode.boxid = self.id
+                    localnode.boxname = self.id
                     localnode.updateDrop(localdrop)
                     updates.append(localnode)
                 if localnode.ftype == "dir":
@@ -196,7 +177,7 @@ class LtrBox(LtrUri,LtrNode):
 
             for nonlocalnode in map(lambda x:nodes.get(x),lesskeys):
                 if nonlocalnode.ftype == "dir":
-                    treeQueue.append((LtrDrop(),nonlocalnode))
+                    treeQueue.append((LtrDrop(nonlocalnode.name,nonlocalnode.path,self.fspath),nonlocalnode))
                 if self.id in nonlocalnode.present:
                     nonlocalnode.present.remove(self.id)
                     show("D %s\n" %(nonlocalnode.getVolPath()))
@@ -207,7 +188,7 @@ class LtrBox(LtrUri,LtrNode):
 
             for newdrop in map(lambda x:drops.get(x),newkeys):
 
-                newnode = LtrNode().new(node.id)
+                newnode = LtrNode().new()
 
                 if not self.id in newnode.present:
                     show("[ updateDrop %s ]" % newdrop.volpath )
@@ -231,7 +212,9 @@ class LtrBox(LtrUri,LtrNode):
             return False
 
     def create(self):
-        self.id = self.name
+        self.id = self.boxname
+        self.path = "/"
+        self.name = ""
         self.doctype = "box"
         self.policy = "complete"
         self.rootnode = "ROOT"

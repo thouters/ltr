@@ -7,26 +7,21 @@ from uri import LtrUri
 
 
 class LtrDrop(LtrUri):
-    def __init__(self,name=False,parentdrop=False):
+    def __repr__(self):
+        s = ""
+        s+= "<LtrDrop %s>" % self.volpath
+        return s
+    def __init__(self,name=False,path=False,fspath=False):
         self.ignoreFileName=".ltrignore"
         if name == False:
             self.ftype = ""
             return
 
-        if parentdrop:
-            self.parent = parentdrop
-            self.volroot = self.parent.volroot
-            self.name = name
-            self.path = join(self.parent.path,self.parent.name)
-            self.volpath = join(self.path,name)
-            self.diskpath = join(self.volroot,self.volpath.strip("/"))
-        else:
-            self.diskpath = name
-            self.volroot = name
-            self.path="/"
-            self.volpath="/"
-            self.name=""
-   
+        self.path = path
+        self.name = name
+        self.fspath = fspath
+        self.volpath = join(self.path,name)
+        self.diskpath = join(self.fspath,self.volpath.strip("/"))
         if isfile(self.diskpath):
             self.ftype = "file"
             self.features = ["ftype","mtime","size"]
@@ -37,11 +32,12 @@ class LtrDrop(LtrUri):
             self.ftype = "symlink"
             self.features = ["ftype","mtime"]
         else:
-            raise Exception, "filetype not handled!"
+            self.ftype = "absent"
 
-        st = stat(self.diskpath)
-        self.mtime = int(st.st_mtime)
-        self.size = st.st_size
+        if self.ftype != "absent":
+            st = stat(self.diskpath)
+            self.mtime = int(st.st_mtime)
+            self.size = st.st_size
 
     def children(self):
         if self.ftype != "dir":
@@ -65,7 +61,7 @@ class LtrDrop(LtrUri):
             for ignore in ignores:
                 if ignore in names:
                     names.remove(ignore)
-        return map(lambda n: LtrDrop(n,self),names)
+        return map(lambda fname: LtrDrop(fname,self.volpath,self.fspath),names)
 
 
     def calcHash(self):

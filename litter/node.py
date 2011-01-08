@@ -8,8 +8,7 @@ class LtrNode(Document):
 
     name = TextField()
     path = TextField()
-    parent = TextField()
-    boxid = TextField()
+    boxname = TextField()
     addtime = DateTimeField()
 
     ftype = TextField()
@@ -29,27 +28,21 @@ class LtrNode(Document):
                             old = TextField(),
                             new = TextField() )))
 
-    def __init__(self,parentobj=False,space=False):
+    def __init__(self,space=False):
         Document.__init__(self)
-        self.parentobj = parentobj
         self.space = space
 
-    def getParentObj(self):
-        return self.parentobj
-
-    def new(self,parent):
+    def new(self):
         self.id = uuid.uuid4().hex
         self.doctype = "node"
-        self.parent = parent
         return self
 
     def updateDrop(self,drop,dryrun=False):
-        """ use drop.calcHash, .boxid to update record"""
+        """ use drop.calcHash, .boxname to update record"""
         self.name = drop.name
         self.mtime = drop.mtime
         self.ftype= drop.ftype
-        if drop.ftype=="dir":
-            self.path = drop.volpath
+        self.path = drop.path
         self.size= drop.size
         if dryrun:
             self.hash = ""
@@ -62,22 +55,16 @@ class LtrNode(Document):
     def children(self):
         if self.space == False:
             return []
-        global_files = list(LtrNode.view(self.space.records,"ltrcrawler/children",key=self.id,include_docs=True))
-        return map(lambda x: x.connect(self.space,self),global_files)
+        volpath = os.path.join(self.path,self.name)
+        global_files = list(LtrNode.view(self.space.records,"ltrcrawler/children",key=volpath,include_docs=True))
+        return map(lambda x: x.connect(self.space),global_files)
 
-    def connect(self,space,parentobj=False):
-        self.parentobj = parentobj
+    def connect(self,space):
         self.space = space
         return self
 
     def getVolPath(self):
-        if self.path:
-            return self.path
-        else:
-            if self.parentobj == False:
-                return "/"
-            else:
-                return os.path.join(self.parentobj.getVolPath(),self.name)
+        return self.path + "/" + self.name
 
     def diff(self,drop):
         """ compare mtime, size etc """
@@ -94,7 +81,7 @@ class LtrNode(Document):
     def stat(self):
         s= "File: %s\n" % self.getVolPath()
         s+= "inode: %s\n" % self.id
-        s+= "boxid: %s\n" % self.boxid
+        s+= "boxname: %s\n" % self.boxname
         s+= "size: %d\n" % self.size
         s+= "type: %s\n"  % self.ftype
         s+= "mimetype: %s\n" % self.mimetype

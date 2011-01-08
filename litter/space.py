@@ -8,8 +8,8 @@ from os.path import isfile
 views = {
     'boxes': { 'map': "function(doc) { if (doc.doctype == \"box\") emit(doc._id,doc); }"},
     'by-hash': { 'map': "function(doc) { if (doc.doctype == \"node\" && doc.hash) emit(doc.hash, doc); }" },
-    'children': { 'map': "function(doc) { if (doc.doctype == \"node\") emit(doc.parent, doc._id); }"},
-    'path': { 'map': "function(doc) { if (doc.doctype == \"node\") emit([doc.parent, doc.name],null); }"},
+    'children': { 'map': "function(doc) { if (doc.doctype == \"node\") emit(doc.path, doc._id); }"},
+    'path': { 'map': "function(doc) { if (doc.doctype == \"node\") emit([doc.path, doc.name],null); }"},
     'tree': { 'map':  "function(doc) { if (doc.doctype == \"node\" && doc.ftype==\"dir\") emit(doc.path); }" },
 }
 
@@ -34,10 +34,6 @@ class LtrSpace(LtrUri):
         print "ltr: push design docs ", self.name
         self.records = self.getCursor()[self.name]
         self.records.update([couchdb.Document(_id='_design/ltrcrawler', language='javascript', views=views)])
-        root = LtrNode()
-        root.id = "ROOT"
-        root.path="/"
-        self.records.update([root])
         return self
 
     def setUri(self,uri):
@@ -91,7 +87,7 @@ class LtrSpace(LtrUri):
         if cwd == "":
             cwd = "/"
         box.cwd = cwd
-        box.setPath(boxroot)
+        box.fspath = boxroot
         return box
 
     def setopt(self,key,value):

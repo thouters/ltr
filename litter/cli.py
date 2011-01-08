@@ -7,7 +7,11 @@ import sys
 
 class LtrCli:
     def __init__(self,argv):
-        parser = argparse.ArgumentParser(description="ltr - Decentralised personal file distribution",prog='ltr')
+        if argv==[]:
+            argv=["status"]
+        parser = argparse.ArgumentParser(\
+            description="ltr - Decentralised personal file distribution",\
+            prog='ltr')
         parser.add_argument('-n','--dryrun',help='dryrun',action="store_true")
 
         subparsers = parser.add_subparsers(title="commands")
@@ -73,7 +77,7 @@ class LtrCli:
         space = LtrSpace().createfromUri(uri)
         box = LtrBox(space).setUri(uri)
         box.create()
-        box.setPath(directory)
+        box.fspath = directory
         box.writeCookie()
 
     def clone(self,args):
@@ -88,7 +92,7 @@ class LtrCli:
             srcbox = space.getBox(space.boxname)
         
         dstbox = LtrBox(srcbox.space)
-        dstbox.setPath(dst)
+        dstbox.fspath = dst
         dstbox.setName(name)
         dstbox.create()
         dstbox.writeCookie()
@@ -146,8 +150,8 @@ class LtrCli:
         if args.boxname == ".":
             box = thisbox
         else:
-            boxid = args.boxname
-            box = thisbox.space.getBox(boxid)
+            boxname = args.boxname
+            box = thisbox.space.getBox(boxname)
  
         f = box.getDrop(box.pathConv(""))
         print "\n".join(map(lambda x: x.name, f.children()))
