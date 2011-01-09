@@ -14,12 +14,12 @@ class LtrNode(Document):
     ftype = TextField()
     hash = TextField()
     mimetype = TextField()
-    ctime = DateTimeField()
+    ctime = IntegerField()
     mtime = IntegerField()
     size = IntegerField()
 
+    deleted = BooleanField()
     isbox = BooleanField()
-    present = ListField(TextField())
     wanted = BooleanField()
 
     log = ListField(DictField(Mapping.build(  \
@@ -41,6 +41,7 @@ class LtrNode(Document):
         """ use drop.calcHash, .boxname to update record"""
         self.name = drop.name
         self.mtime = drop.mtime
+        self.ctime = drop.ctime
         self.ftype= drop.ftype
         self.path = drop.path
         self.size= drop.size

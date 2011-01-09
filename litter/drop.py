@@ -37,6 +37,7 @@ class LtrDrop(LtrUri):
         if self.ftype != "absent":
             st = stat(self.diskpath)
             self.mtime = int(st.st_mtime)
+            self.ctime = int(st.st_ctime)
             self.size = st.st_size
 
     def children(self):

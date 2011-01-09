@@ -7,6 +7,13 @@ import shutil
 import sys
 import uuid
 
+def show(x):
+    sys.stdout.write("\r"+ x.replace("\n"," "*20+"\n"))
+    sys.stdout.flush()
+
+def dictbyname(l):
+    return dict(map(lambda x: (x.name,x),l))
+
 
 class LtrBox(LtrUri,LtrNode):
     policy = TextField()
@@ -58,7 +65,7 @@ class LtrBox(LtrUri,LtrNode):
         if dirpath=="":
             dirpath = "/"
         nodes = list(LtrNode.view(self.space.records,"ltrcrawler/path",key=[dirpath,fname],include_docs=True))
-        nodes = filter(lambda x: self.id in x.present or x.boxname == self.id ,nodes)
+        nodes = filter(lambda x: x.boxname == self.id ,nodes)
         if 0==len(nodes):
             return None
         node = nodes[0]
@@ -140,66 +147,65 @@ class LtrBox(LtrUri,LtrNode):
             return False
 
 
-    def commit(self,startNode=False,dryrun=True):
-        def show(x):
-            sys.stdout.write("\r"+ x.replace("\n"," "*20+"\n"))
-            sys.stdout.flush()
-        treeQueue=[]
+    def commit(self,dryrun=True):
+        """ update target with data from source """
+        queue=[]
         updates = []
-        if startNode == False:
-            startNode = self
 
-        #print startNode
-        treeQueue.append( (LtrDrop("","/",self.fspath),startNode) )
+        import datetime
+        time = datetime.datetime.now()
 
-        while len(treeQueue):
-            (drop,node)= treeQueue.pop(0)
-            nodes = node.children()
-            drops = drop.children()
-            nodes = dict(map(lambda node: (node.name,node),nodes))
-            drops = dict(map(lambda drop: (drop.name,drop),drops))
+        queue.append( (LtrDrop("","/",self.fspath),self) )
 
-            newkeys = set(drops.keys()) - set(nodes.keys())
-            lesskeys = set(nodes.keys()) - set(drops.keys())
-            staykeys = set(nodes.keys()) & set(drops.keys())
+        targetfilter = lambda n: n.boxname == self.id and not n.deleted
+        sourcefilter = lambda n: True
+
+        while len(queue):
+            (source,target)= queue.pop(0)
+
+            input_ = dictbyname(filter(sourcefilter,source.children()))
+            updateable = dictbyname(filter(targetfilter,target.children()))
+
+            newkeys = set(input_.keys()) - set(updateable.keys())
+            lesskeys = set(updateable.keys()) - set(input_.keys())
+            staykeys = set(updateable.keys()) & set(input_.keys())
 
             for filename in staykeys:
-                localnode = nodes[filename]
-                localdrop = drops[filename]
-                diff  = localnode.diff(localdrop)
+                updating = updateable[filename]
+                current = input_[filename]
+                diff  = updating.diff(current)
                 if diff != []:
-                    show("M %s %s\n" %(localdrop.volpath,diff))
-                    show("[ updateDrop %s ]" % localdrop.name )
-                    localnode.boxname = self.id
-                    localnode.updateDrop(localdrop)
-                    updates.append(localnode)
-                if localnode.ftype == "dir":
-                    treeQueue.append((localdrop,localnode))
+                    show("M %s %s\n" %(current.volpath,diff))
+                    show("[ updateDrop %s ]" % current.name )
+                    updating.updateDrop(current)
+                    updates.append(updating)
+                if updating.ftype == "dir":
+                    queue.append((current,updating))
 
-            for nonlocalnode in map(lambda x:nodes.get(x),lesskeys):
-                if nonlocalnode.ftype == "dir":
-                    treeQueue.append((LtrDrop(nonlocalnode.name,nonlocalnode.path,self.fspath),nonlocalnode))
-                if self.id in nonlocalnode.present:
-                    nonlocalnode.present.remove(self.id)
-                    show("D %s\n" %(nonlocalnode.getVolPath()))
-                    updates.append(nonlocalnode)
-                else:
-                    if self.policy == "complete":
-                        show("w %s\n" %(nonlocalnode.getVolPath()))
+            for gone in map(lambda x:updateable.get(x),lesskeys):
+                if gone.ftype == "dir":
+                    queue.append((LtrDrop(gone.name,gone.path,self.fspath),gone))
+                gone.deleted = True
+                show("D %s\n" %(gone.getVolPath()))
+                updates.append(gone)
+                if self.policy == "complete":
+                    show("w %s\n" %(gone.getVolPath()))
 
-            for newdrop in map(lambda x:drops.get(x),newkeys):
+            for new in map(lambda x:input_.get(x),newkeys):
 
                 newnode = LtrNode().new()
 
-                if not self.id in newnode.present:
-                    show("[ updateDrop %s ]" % newdrop.volpath )
-                    newnode.updateDrop(newdrop,dryrun=dryrun)
-                    newnode.present.append(self.id)
-                    show("N %s\n" %(newdrop.volpath))
-                    updates.append(newnode)
+                show("[ updateDrop %s ]" % new.volpath )
+                newnode.updateDrop(new,dryrun=dryrun)
+                newnode.boxname = self.id
+                newnode.deleted = False
+                newnode.addtime = time
+                newnode.isbox = False
+                show("N %s\n" %(new.volpath))
+                updates.append(newnode)
 
-                if newdrop.ftype == "dir":
-                    treeQueue.append((newdrop,newnode))
+                if new.ftype == "dir":
+                    queue.append((new,newnode))
 
         if not dryrun:
             print "." * len(updates)

@@ -1,7 +1,6 @@
-LtrUri isoleren
+don't inherit from LtrUri
 
-view-tree-example:
-    key=[parent,fname], value=boxid
+one Node per Drop
 
 node-logentry-example:
     doctype: node
@@ -10,8 +9,6 @@ node-logentry-example:
 log-view-summary-example:
     ([timestamp,boxid],[fileid,action])
     
-make parent a path
-
 ltr diff
 ltr update (trigger couchdb replicate)
 ltr: "ping boxname" command (attempt to access other box and set it as origin) 

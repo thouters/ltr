@@ -51,6 +51,30 @@ streamlined like this:
 
 ## Operations
 
+    thomas@maytag 1b % ltr --help
+    usage: ltr [-h] [-n]
+               {box,pull,stat,set,show,create,status,ls,diff,commit,clone} ...
+    
+    ltr - Decentralised personal file distribution
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -n, --dryrun          dryrun
+    
+    commands:
+      {box,pull,stat,set,show,create,status,ls,diff,commit,clone}
+        create              creates a new dropbox
+        clone               create a new ltrbox out of an existing one
+        pull                retrieve wanted files from other ltrbox
+        box                 show list of ltrboxes in this volume
+        ls                  show database filelist
+        commit              update database with filesystem
+        status              compare filesystem to database
+        diff                compare files between boxes
+        show                show information on object
+        set                 set object parameter
+        stat                consult database about filename
+
 ### Create LtrSpace and box
 
     thomas@maytag ~ % mkdir xyz; cd xyz
