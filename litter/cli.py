@@ -120,7 +120,7 @@ class LtrCli:
 
     def stat(self,args):
         box = LtrSpace.boxFromCookie(os.getcwd())
-        fname = args.filespec.strip()
+        fname = args.filename.strip()
         node = box.getNode(box.pathConv(fname))
         if node != None:
             print node.stat(),
