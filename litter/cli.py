@@ -38,8 +38,8 @@ class LtrCli:
         box_.set_defaults(func=self.box)
 
         ls_ = subparsers.add_parser('ls',help="show database filelist")
-        ls_.add_argument('filespec',help="path (default: .)",default=".")
-        ls_.add_argument("-b",'--boxname',help="boxname (default: .)",default=".", action="append")
+        ls_.add_argument('filespec',help="path (default: .)",default="",nargs="?")
+        ls_.add_argument("-b",'--boxname',help="boxname (default: .)",default=".",required=False)
         ls_.set_defaults(func=self.ls)
 
         commit_ = subparsers.add_parser('commit',help="update database with filesystem")
@@ -121,7 +121,7 @@ class LtrCli:
     def stat(self,args):
         box = LtrSpace.boxFromCookie(os.getcwd())
         fname = args.filespec.strip()
-        node = box.getDrop(box.pathConv(fname))
+        node = box.getNode(box.pathConv(fname))
         if node != None:
             print node.stat(),
 
@@ -153,5 +153,8 @@ class LtrCli:
             boxname = args.boxname
             box = thisbox.space.getBox(boxname)
  
-        f = box.getDrop(box.pathConv(""))
-        print "\n".join(map(lambda x: x.name, f.children()))
+        f = box.getNode(box.pathConv(args.filespec))
+        files = f.children()
+        files = filter(lambda n: n.isbox!=True,files)
+        filenames=map(lambda x: x.name,files)
+        print "\n".join(filenames),

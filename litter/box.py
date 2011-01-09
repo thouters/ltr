@@ -49,15 +49,16 @@ class LtrBox(LtrUri,LtrNode):
         return "/".join(self.dbserveruri.strip("/"),self.spacename)
 
     def pathConv(self,relativetocwd):
-        return os.path.join(self.cwd,relativetocwd)
+        s = os.path.join(self.cwd,relativetocwd)
+        return s.rstrip("/")
 
-    def getDrop(self,fullvolpath):
+    def getNode(self,fullvolpath):
         fname = fullvolpath.split("/")[-1]
         dirpath = fullvolpath[0:-len(fname)] # trailing /
-        if dirpath!="/":
-            qpath=dirpath.rstrip("/")
-        nodes = list(LtrNode.view(self.space.records,"ltrcrawler/path",key=[qpath,fname],include_docs=True))
-        nodes = filter(lambda x: x.boxname == self.id,nodes)
+        if dirpath=="":
+            dirpath = "/"
+        nodes = list(LtrNode.view(self.space.records,"ltrcrawler/path",key=[dirpath,fname],include_docs=True))
+        nodes = filter(lambda x: self.id in x.present or x.boxname == self.id ,nodes)
         if 0==len(nodes):
             return None
         node = nodes[0]
@@ -215,9 +216,9 @@ class LtrBox(LtrUri,LtrNode):
         self.id = self.boxname
         self.path = "/"
         self.name = ""
-        self.doctype = "box"
+        self.isbox = True
+        self.doctype = "node"
         self.policy = "complete"
-        self.rootnode = "ROOT"
         print "ltr: new box to database ", self
         self.store(self.space.records)
 
