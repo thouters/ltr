@@ -42,10 +42,13 @@ class LtrDrop(LtrUri):
     def children(self):
         if self.ftype != "dir":
             return []
-        if ismount(self.diskpath) and self.volpath !="":
-            print "ltr: skip mount ", self.diskpath
-            return []
         names = listdir(self.diskpath)
+
+        mounts = filter(lambda f: ismount(join(self.diskpath,f)),names)
+        names = filter(lambda f: not ismount(join(self.diskpath,f)),names)
+        for m in mounts:
+            print "ltr: skip mount ", m
+
         if ".ltr" in names:
             if self.volpath != "/":
                 print "ltr: skip ltrbox ", self.diskpath
