@@ -57,6 +57,7 @@ class LtrNode(Document):
             return []
         volpath = os.path.join(self.path,self.name)
         global_files = list(LtrNode.view(self.space.records,"ltrcrawler/children",key=volpath,include_docs=True))
+        global_files = filter(lambda n: n.isbox!=True,global_files)
         return map(lambda x: x.connect(self.space),global_files)
 
     def connect(self,space):
@@ -64,7 +65,10 @@ class LtrNode(Document):
         return self
 
     def getVolPath(self):
-        return self.path + "/" + self.name
+        if self.path=="/":
+            return "/" + self.name
+        else:
+            return self.path + "/" + self.name
 
     def diff(self,drop):
         """ compare mtime, size etc """

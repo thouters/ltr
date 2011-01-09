@@ -155,6 +155,5 @@ class LtrCli:
  
         f = box.getNode(box.pathConv(args.filespec))
         files = f.children()
-        files = filter(lambda n: n.isbox!=True,files)
         filenames=map(lambda x: x.name,files)
         print "\n".join(filenames),
