@@ -35,6 +35,7 @@ class LtrBox(LtrUri,LtrNode):
 
     def __init__(self,space=False):
         LtrNode.__init__(self)
+        LtrUri.__init__(self)
         self.record = False
         self.name = False
         self.space = False
@@ -92,7 +93,7 @@ class LtrBox(LtrUri,LtrNode):
         self.boxname = name
         self.boxuri = self.space.getBoxUri(self.boxname)
 
-    def pull(self,srcbox,dryrun=True):
+    def fetch(self,srcbox,dryrun=True):
         print "ltr: pull ", srcbox.fspath
         queue=[]
         updates = []
@@ -102,7 +103,7 @@ class LtrBox(LtrUri,LtrNode):
         time = datetime.datetime.now()
         queue.append((srcbox,self))
 
-        targetfilter = lambda n: n.boxname == self.id
+        targetfilter = lambda n: n.boxname == self.id 
         sourcefilter = lambda n: n.boxname == srcbox.id
 
         while len(queue):
@@ -120,7 +121,7 @@ class LtrBox(LtrUri,LtrNode):
                 updating = updateable[filename]
                 diff  = updating.diff(current)
                 if diff != []:
-                    show("M %s %s\n" %(current.volpath,diff))
+                    show("M %s %s\n" %(current.getVolPath(),diff))
                     wanted.append((current,updating))
                 if updating.ftype == "dir":
                     queue.append((current,updating))
@@ -252,14 +253,16 @@ class LtrBox(LtrUri,LtrNode):
         self.isbox = True
         self.doctype = "node"
         self.policy = "complete"
+        self.couchurl = self.spaceuri
         print "ltr: new box to database ", self
         self.store(self.space.records)
 
     @classmethod
-    def createfromUri(self,uri):
-        LtrUri.setUri(self,uri)
-        self.name = self.boxname
-        self.create()
-        return self
+    def createfromUri(cls,uri):
+        s = cls()
+        LtrUri.setUri(s,uri)
+        s.name = s.boxname
+        s.create()
+        return s
 
 

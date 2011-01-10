@@ -1,4 +1,4 @@
-don't inherit from LtrUri
+node flag: str in ["wanted","not wanted","deleted"]
 
 node-logentry-example:
     doctype: node

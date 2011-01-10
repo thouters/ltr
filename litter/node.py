@@ -4,9 +4,9 @@ import os.path
 import uuid
 
 features = {
-    "file":["ftype","mtime","size"],
-    "dir":["ftype"],
-    "symlink":["ftype","mtime"]
+    "file":["ftype","mtime","size","deleted"],
+    "dir":["ftype","deleted"],
+    "symlink":["ftype","mtime","deleted"]
     }
 class LtrNode(Document):
     doctype = TextField()
@@ -104,6 +104,7 @@ class LtrNode(Document):
         s+= "mimetype: %s\n" % self.mimetype
         s+= "sha1sum: %s\n" % self.hash
         s+= "isbox: %s\n" % self.isbox
+        s+= "deleted: %s\n" % self.deleted
         s+= "wanted: %s\n" % self.wanted
         return s
 
