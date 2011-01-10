@@ -7,6 +7,7 @@ import shutil
 import sys
 import uuid
 
+from pprint import pprint
 def show(x):
     sys.stdout.write("\r"+ x.replace("\n"," "*20+"\n"))
     sys.stdout.flush()
@@ -91,49 +92,74 @@ class LtrBox(LtrUri,LtrNode):
         self.boxname = name
         self.boxuri = self.space.getBoxUri(self.boxname)
 
-    def pull(self,srcbox,startNode=False,dryrun=True):
-        print "ltr: pull ", srcbox.path
-        treeQueue=[]
+    def pull(self,srcbox,dryrun=True):
+        print "ltr: pull ", srcbox.fspath
+        queue=[]
         updates = []
-        if startNode == False:
-            startNode = self
+        wanted = []
 
-        #print startNode
-        treeQueue.append(startNode)
+        import datetime
+        time = datetime.datetime.now()
+        queue.append((srcbox,self))
 
-        while len(treeQueue):
-            node= treeQueue.pop(0)
-            nodes = node.children()
-            #nodes = dict(map(lambda node: (node.name,node),nodes))
-        
-            if self.policy == "complete":
-                wanted = filter(lambda n: \
-                    self.id not in n.present and srcbox.id in n.present \
-                    ,nodes)
-            elif self.policy == "ondemand":
-                wanted = filter(lambda n: \
-                    self.id not in n.present and srcbox.id in n.wanted \
-                    ,nodes)
+        targetfilter = lambda n: n.boxname == self.id
+        sourcefilter = lambda n: n.boxname == srcbox.id
 
-            for node in wanted:
-                src = os.path.join(srcbox.fspath,node.path.strip("/"),node.name)
-                dst = os.path.join(self.fspath,node.path.strip("/"),node.name)
-                if node.ftype != "dir":
-                    print "cp %s %s " % (src,dst)
-                    if not dryrun:
+        while len(queue):
+            (source,target)= queue.pop(0)
+
+            input_ = dictbyname(filter(sourcefilter,source.children()))
+            updateable = dictbyname(filter(targetfilter,target.children()))
+
+            absentfiles = set(input_.keys()) - set(updateable.keys())
+            existingfiles = set(updateable.keys()) & set(input_.keys())
+
+            for filename in existingfiles:
+                #fixme, check deleted flag
+                current = input_[filename]
+                updating = updateable[filename]
+                diff  = updating.diff(current)
+                if diff != []:
+                    show("M %s %s\n" %(current.volpath,diff))
+                    wanted.append((current,updating))
+                if updating.ftype == "dir":
+                    queue.append((current,updating))
+
+            for filename in absentfiles:
+                current = input_[filename]
+                absent = LtrNode().new()
+
+                absent.name = current.name
+                absent.path = current.path
+                absent.boxname = self.id
+                absent.deleted = True
+                absent.addtime = time
+                absent.isbox = False
+                show("w %s\n" %(absent.getVolPath()))
+                if current.ftype == "dir":
+                    queue.append((current,absent))
+                wanted.append((current,absent))
+
+        for (current,updating) in wanted:
+            src = os.path.join(srcbox.fspath,current.getVolPath().strip("/"))
+            dst = os.path.join(self.fspath,updating.getVolPath().strip("/"))
+            if current.ftype != "dir":
+                print "cp %s %s " % (src,dst)
+                if not dryrun:
+                    shutil.copy2(src,dst)
+                    try:
                         shutil.copy2(src,dst)
-                        try:
-                            shutil.copy2(src,dst)
-                        except:
-                            print "error"
-                else:
-                    print "mkdir %s " % dst
-                    if not dryrun:
-                        os.mkdir(dst)
-                    treeQueue.append(node)
-
-                node.present.append(self.id)
-                updates.append(node)
+                    except:
+                        print "error"
+            else:
+                print "mkdir %s " % dst
+                if not dryrun:
+                    os.mkdir(dst)
+        
+            updating.deleted = False
+            updating.log.append({"dt": time, "etype": "pull", "old":current.id})
+            updating.updateDrop(current)
+            updates.append(updating)
 
         if not dryrun:
             print "." * len(updates)
@@ -157,8 +183,8 @@ class LtrBox(LtrUri,LtrNode):
 
         queue.append( (LtrDrop("","/",self.fspath),self) )
 
-        targetfilter = lambda n: n.boxname == self.id and not n.deleted
         sourcefilter = lambda n: True
+        targetfilter = lambda n: n.boxname == self.id 
 
         while len(queue):
             (source,target)= queue.pop(0)
@@ -166,32 +192,33 @@ class LtrBox(LtrUri,LtrNode):
             input_ = dictbyname(filter(sourcefilter,source.children()))
             updateable = dictbyname(filter(targetfilter,target.children()))
 
-            newkeys = set(input_.keys()) - set(updateable.keys())
-            lesskeys = set(updateable.keys()) - set(input_.keys())
-            staykeys = set(updateable.keys()) & set(input_.keys())
+            newfiles = set(input_.keys()) - set(updateable.keys())
+            absentfiles = set(updateable.keys()) - set(input_.keys())
+            existingfiles = set(updateable.keys()) & set(input_.keys())
 
-            for filename in staykeys:
+            for filename in existingfiles:
+                existing = input_[filename]
                 updating = updateable[filename]
-                current = input_[filename]
-                diff  = updating.diff(current)
+                diff  = updating.diff(existing)
                 if diff != []:
-                    show("M %s %s\n" %(current.volpath,diff))
-                    show("[ updateDrop %s ]" % current.name )
-                    updating.updateDrop(current)
+                    show("M %s %s\n" %(existing.volpath,diff))
+                    show("[ updateDrop %s ]" % existing.name )
+                    updating.updateDrop(existing)
                     updates.append(updating)
                 if updating.ftype == "dir":
-                    queue.append((current,updating))
+                    queue.append((existing,updating))
 
-            for gone in map(lambda x:updateable.get(x),lesskeys):
+            for gone in map(lambda x:updateable.get(x),absentfiles):
                 if gone.ftype == "dir":
                     queue.append((LtrDrop(gone.name,gone.path,self.fspath),gone))
+                if gone.deleted != True:
+                    show("D %s\n" %(gone.getVolPath()))
                 gone.deleted = True
-                show("D %s\n" %(gone.getVolPath()))
                 updates.append(gone)
                 if self.policy == "complete":
                     show("w %s\n" %(gone.getVolPath()))
 
-            for new in map(lambda x:input_.get(x),newkeys):
+            for new in map(lambda x:input_.get(x),newfiles):
 
                 newnode = LtrNode().new()
 

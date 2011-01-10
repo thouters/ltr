@@ -3,6 +3,11 @@ IntegerField,BooleanField,ListField,DictField,Mapping
 import os.path
 import uuid
 
+features = {
+    "file":["ftype","mtime","size"],
+    "dir":["ftype"],
+    "symlink":["ftype","mtime"]
+    }
 class LtrNode(Document):
     doctype = TextField()
 
@@ -36,6 +41,11 @@ class LtrNode(Document):
         self.id = uuid.uuid4().hex
         self.doctype = "node"
         return self
+
+    def calcHash(self):
+        return self.hash
+    def calcMime(self):
+        return self.mimetype
 
     def updateDrop(self,drop,dryrun=False):
         """ use drop.calcHash, .boxname to update record"""
@@ -76,7 +86,7 @@ class LtrNode(Document):
 #        import sys,pprint
 #        sys.exit(0)
         diffs = []
-        for attr in drop.features:
+        for attr in features[drop.ftype]:
             (a,b) = (getattr(self,attr),getattr(drop,attr))
             if a != b:
                 diffs.append((attr,a,b))
@@ -91,7 +101,6 @@ class LtrNode(Document):
         s+= "type: %s\n"  % self.ftype
         s+= "mimetype: %s\n" % self.mimetype
         s+= "sha1sum: %s\n" % self.hash
-        s+= "present: %s\n" % self.present
         s+= "isbox: %s\n" % self.isbox
         s+= "wanted: %s\n" % self.wanted
         return s

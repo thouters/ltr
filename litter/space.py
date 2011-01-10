@@ -6,7 +6,7 @@ import os
 from os.path import isfile
 
 views = {
-    'boxes': { 'map': "function(doc) { if (doc.doctype == \"box\") emit(doc._id,doc); }"},
+    'boxes': { 'map': "function(doc) { if (doc.isbox && doc.isbox == true) emit(doc._id,doc); }"},
     'by-hash': { 'map': "function(doc) { if (doc.doctype == \"node\" && doc.hash) emit(doc.hash, doc); }" },
     'children': { 'map': "function(doc) { if (doc.doctype == \"node\") emit(doc.path, doc._id); }"},
     'path': { 'map': "function(doc) { if (doc.doctype == \"node\") emit([doc.path, doc.name],null); }"},

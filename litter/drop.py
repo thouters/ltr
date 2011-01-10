@@ -24,13 +24,10 @@ class LtrDrop(LtrUri):
         self.diskpath = join(self.fspath,self.volpath.strip("/"))
         if isfile(self.diskpath):
             self.ftype = "file"
-            self.features = ["ftype","mtime","size"]
         elif isdir(self.diskpath):
             self.ftype = "dir" 
-            self.features = ["ftype"]
         elif islink(self.diskpath):
             self.ftype = "symlink"
-            self.features = ["ftype","mtime"]
         else:
             self.ftype = "absent"
 
