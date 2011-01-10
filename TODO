@@ -1,7 +1,5 @@
 don't inherit from LtrUri
 
-one Node per Drop
-
 node-logentry-example:
     doctype: node
     log: {"{{timestamp}}":[{"type":"edit"},{}]}

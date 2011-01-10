@@ -62,7 +62,7 @@ class LtrBox(LtrUri,LtrNode):
 
     def getNode(self,fullvolpath):
         fname = fullvolpath.split("/")[-1]
-        dirpath = fullvolpath[0:-len(fname)] # trailing /
+        dirpath = fullvolpath[0:-len(fname)].rstrip("/") # trailing /
         if dirpath=="":
             dirpath = "/"
         nodes = list(LtrNode.view(self.space.records,"ltrcrawler/path",key=[dirpath,fname],include_docs=True))

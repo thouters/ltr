@@ -65,6 +65,7 @@ class LtrCli:
         set_.set_defaults(func=self.set)
 
         stat_ = subparsers.add_parser('stat',help="consult database about filename")
+        stat_.add_argument("-b",'--boxname',help="boxname (default: .)",default=".",required=False)
         stat_.add_argument('filename')
         stat_.set_defaults(func=self.stat)
 
@@ -119,8 +120,15 @@ class LtrCli:
         box.space.setopt(key,value)
 
     def stat(self,args):
-        box = LtrSpace.boxFromCookie(os.getcwd())
+        thisbox = LtrSpace.boxFromCookie(os.getcwd())
         fname = args.filename.strip()
+        if args.boxname == ".":
+            box = thisbox
+        else:
+            boxname = args.boxname
+            box = thisbox.space.getBox(boxname)
+            box.cwd = thisbox.cwd
+
         node = box.getNode(box.pathConv(fname))
         if node != None:
             print node.stat(),
@@ -152,8 +160,10 @@ class LtrCli:
         else:
             boxname = args.boxname
             box = thisbox.space.getBox(boxname)
+            box.cwd = thisbox.cwd
  
         f = box.getNode(box.pathConv(args.filespec))
-        files = f.children()
-        filenames=map(lambda x: x.name,files)
+        files = f.children(boxname=box.id)
+        filenames = map(lambda x: x.name,files)
+        filenames.sort()
         print "\n".join(filenames),

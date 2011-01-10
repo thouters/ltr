@@ -63,12 +63,14 @@ class LtrNode(Document):
             self.mimetype = drop.calcMime()
         self.delta = []
         
-    def children(self):
+    def children(self,boxname=False):
         if self.space == False:
             return []
         volpath = os.path.join(self.path,self.name)
         global_files = list(LtrNode.view(self.space.records,"ltrcrawler/children",key=volpath,include_docs=True))
         global_files = filter(lambda n: n.isbox!=True,global_files)
+        if boxname != False:
+            global_files = filter(lambda n: n.boxname==boxname,global_files)
         return map(lambda x: x.connect(self.space),global_files)
 
     def connect(self,space):
