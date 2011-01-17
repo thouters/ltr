@@ -1,4 +1,13 @@
-node flag: str in ["wanted","not wanted","deleted"]
+
+node.flags: str[] ;["wanted","skip","deleted","copy"]
+
+make isbox a flag!
+
+removing file from disk changes it to "Trashed" state.
+ltr tidy makes you choose:
+ a) propagate deleted status to other boxes
+ b) marking file(s) as "skip" for local box
+
 
 node-logentry-example:
     doctype: node
@@ -7,6 +16,17 @@ node-logentry-example:
 log-view-summary-example:
     ([timestamp,boxid],[fileid,action])
     
+Ltr wishlist
+
+# Tarball incremental backup plugin 
+# Pgp encrypted files plugin
+# time machine plugin
+# Flat checkout plugin; commit does not add new files, you have to ltr insert path filename
+# box quota
+# redundancy plugin
+# online/offline attribute
+ disk-by-label://green/Mybox
+
 ltr diff
 ltr update (trigger couchdb replicate)
 ltr: "ping boxname" command (attempt to access other box and set it as origin) 

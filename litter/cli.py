@@ -245,7 +245,7 @@ class LtrCli:
  
         f = box.getNode(box.pathConv(args.filespec))
         files = f.children(boxname=box.id)
-        files = filter(lambda x: x.deleted!=True,files)
+        files = filter(lambda x: "copy" in x.flags,files)
         filenames = map(lambda x: x.name,files)
         filenames.sort()
         print "\n".join(filenames),

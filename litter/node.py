@@ -4,9 +4,9 @@ import os.path
 import uuid
 
 features = {
-    "file":["ftype","mtime","size","deleted"],
-    "dir":["ftype","deleted"],
-    "symlink":["ftype","mtime","deleted"]
+    "file":["ftype","mtime","size","flags"],
+    "dir":["ftype","flags"],
+    "symlink":["ftype","mtime","flags"]
     }
 class LtrNode(Document):
     doctype = TextField()
@@ -23,9 +23,8 @@ class LtrNode(Document):
     mtime = IntegerField()
     size = IntegerField()
 
-    deleted = BooleanField()
+    flags = ListField(TextField())
     isbox = BooleanField()
-    wanted = BooleanField()
 
     log = ListField(DictField(Mapping.build(  \
                             dt = DateTimeField(),
@@ -104,8 +103,7 @@ class LtrNode(Document):
         s+= "mimetype: %s\n" % self.mimetype
         s+= "sha1sum: %s\n" % self.hash
         s+= "isbox: %s\n" % self.isbox
-        s+= "deleted: %s\n" % self.deleted
-        s+= "wanted: %s\n" % self.wanted
+        s+= "flags: %s\n" % self.flags
         return s
 
 

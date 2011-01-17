@@ -22,7 +22,7 @@ class LtrDrop(LtrUri):
         self.fspath = fspath
         self.volpath = join(self.path,name)
         self.diskpath = join(self.fspath,self.volpath.strip("/"))
-        self.deleted=False
+        self.flags=["copy"]
         if isfile(self.diskpath):
             self.ftype = "file"
         elif isdir(self.diskpath):

@@ -109,16 +109,20 @@ class LtrBox(LtrUri,LtrNode):
         while len(queue):
             (source,target)= queue.pop(0)
 
-            input_ = dictbyname(filter(sourcefilter,source.children()))
-            updateable = dictbyname(filter(targetfilter,target.children()))
+            source = dictbyname(filter(sourcefilter,source.children()))
+            target = dictbyname(filter(targetfilter,target.children()))
 
-            absentfiles = set(input_.keys()) - set(updateable.keys())
-            existingfiles = set(updateable.keys()) & set(input_.keys())
+            srcunique = set(source.keys()) - set(target.keys())
+            common = set(target.keys()) & set(source.keys())
 
-            for filename in existingfiles:
-                #fixme, check deleted flag
-                current = input_[filename]
-                updating = updateable[filename]
+            for filename in common:
+                #fixme, query DB for matching size,hash tuples
+                current = source[filename]
+                updating = target[filename]
+                if "skip" in updating.flags:
+                    continue
+                if not "copy" in current.flags:
+                    continue
                 diff  = updating.diff(current)
                 if diff != []:
                     show("M %s %s\n" %(current.getVolPath(),diff))
@@ -126,14 +130,16 @@ class LtrBox(LtrUri,LtrNode):
                 if updating.ftype == "dir":
                     queue.append((current,updating))
 
-            for filename in absentfiles:
-                current = input_[filename]
+            # nodes absent but wanted
+            for filename in srcunique:
+                current = source[filename]
                 absent = LtrNode().new()
 
                 absent.name = current.name
                 absent.path = current.path
                 absent.boxname = self.id
-                absent.deleted = True
+                if "copy" in absent.flags:
+                    absent.flags.append("copy")
                 absent.addtime = time
                 absent.isbox = False
                 show("w %s\n" %(absent.getVolPath()))
@@ -157,7 +163,10 @@ class LtrBox(LtrUri,LtrNode):
                 if not dryrun:
                     os.mkdir(dst)
         
-            updating.deleted = False
+            if not "copy" in updating.flags:
+                updating.flags.append("copy")
+            if "deleted" in updating.flags:
+                updating.flags.remove("deleted")
             updating.log.append({"dt": time, "etype": "pull", "old":current.id})
             updating.updateDrop(current)
             updates.append(updating)
@@ -190,16 +199,16 @@ class LtrBox(LtrUri,LtrNode):
         while len(queue):
             (source,target)= queue.pop(0)
 
-            input_ = dictbyname(filter(sourcefilter,source.children()))
-            updateable = dictbyname(filter(targetfilter,target.children()))
+            source = dictbyname(filter(sourcefilter,source.children()))
+            target = dictbyname(filter(targetfilter,target.children()))
 
-            newfiles = set(input_.keys()) - set(updateable.keys())
-            absentfiles = set(updateable.keys()) - set(input_.keys())
-            existingfiles = set(updateable.keys()) & set(input_.keys())
+            srcunique = set(source.keys()) - set(target.keys())
+            absent = set(target.keys()) - set(source.keys())
+            common = set(target.keys()) & set(source.keys())
 
-            for filename in existingfiles:
-                existing = input_[filename]
-                updating = updateable[filename]
+            for filename in common:
+                existing = source[filename]
+                updating = target[filename]
                 diff  = updating.diff(existing)
                 if diff != []:
                     show("M %s %s\n" %(existing.volpath,diff))
@@ -209,24 +218,26 @@ class LtrBox(LtrUri,LtrNode):
                 if updating.ftype == "dir":
                     queue.append((existing,updating))
 
-            for gone in map(lambda x:updateable.get(x),absentfiles):
+            for gone in map(lambda x:target.get(x),absent):
                 if gone.ftype == "dir":
                     queue.append((LtrDrop(gone.name,gone.path,self.fspath),gone))
-                if gone.deleted != True:
+                if "copy" in absent.flags:
                     show("D %s\n" %(gone.getVolPath()))
-                gone.deleted = True
+                if "copy" in absent.flags:
+                    absent.flags.remove("copy")
                 updates.append(gone)
                 if self.policy == "complete":
                     show("w %s\n" %(gone.getVolPath()))
 
-            for new in map(lambda x:input_.get(x),newfiles):
+            for new in map(lambda x:source.get(x),srcunique):
 
                 newnode = LtrNode().new()
 
                 show("[ updateDrop %s ]" % new.volpath )
                 newnode.updateDrop(new,dryrun=dryrun)
                 newnode.boxname = self.id
-                newnode.deleted = False
+                if not "copy" in newnode.flags:
+                    newnode.flags.append("copy")
                 newnode.addtime = time
                 newnode.isbox = False
                 show("N %s\n" %(new.volpath))
