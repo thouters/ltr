@@ -24,7 +24,6 @@ class LtrNode(Document):
     size = IntegerField()
 
     flags = ListField(TextField())
-    isbox = BooleanField()
 
     log = ListField(DictField(Mapping.build(  \
                             dt = DateTimeField(),
@@ -67,7 +66,7 @@ class LtrNode(Document):
             return []
         volpath = os.path.join(self.path,self.name)
         global_files = list(LtrNode.view(self.space.records,"ltrcrawler/children",key=volpath,include_docs=True))
-        global_files = filter(lambda n: n.isbox!=True,global_files)
+        global_files = filter(lambda n: not "boxroot" in n.flags,global_files)
         if boxname != False:
             global_files = filter(lambda n: n.boxname==boxname,global_files)
         return map(lambda x: x.connect(self.space),global_files)
@@ -102,7 +101,6 @@ class LtrNode(Document):
         s+= "type: %s\n"  % self.ftype
         s+= "mimetype: %s\n" % self.mimetype
         s+= "sha1sum: %s\n" % self.hash
-        s+= "isbox: %s\n" % self.isbox
         s+= "flags: %s\n" % self.flags
         return s
 

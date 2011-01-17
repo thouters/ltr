@@ -141,7 +141,6 @@ class LtrBox(LtrUri,LtrNode):
                 if "copy" in absent.flags:
                     absent.flags.append("copy")
                 absent.addtime = time
-                absent.isbox = False
                 show("w %s\n" %(absent.getVolPath()))
                 if current.ftype == "dir":
                     queue.append((current,absent))
@@ -239,7 +238,6 @@ class LtrBox(LtrUri,LtrNode):
                 if not "copy" in newnode.flags:
                     newnode.flags.append("copy")
                 newnode.addtime = time
-                newnode.isbox = False
                 show("N %s\n" %(new.volpath))
                 updates.append(newnode)
 
@@ -261,7 +259,7 @@ class LtrBox(LtrUri,LtrNode):
         self.id = self.boxname
         self.path = "/"
         self.name = ""
-        self.isbox = True
+        self.flags = ["copy","boxroot"]
         self.doctype = "node"
         self.policy = "complete"
         self.couchurl = self.spaceuri

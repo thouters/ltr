@@ -1,8 +1,6 @@
 
 node.flags: str[] ;["wanted","skip","deleted","copy"]
 
-make isbox a flag!
-
 removing file from disk changes it to "Trashed" state.
 ltr tidy makes you choose:
  a) propagate deleted status to other boxes
