@@ -119,9 +119,7 @@ class LtrBox(LtrUri,LtrNode):
                 #fixme, query DB for matching size,hash tuples
                 current = source[filename]
                 updating = target[filename]
-                if "skip" in updating.flags:
-                    continue
-                if not "copy" in current.flags:
+                if "s" in updating.flags:
                     continue
                 diff  = updating.diff(current)
                 if diff != []:
@@ -138,13 +136,13 @@ class LtrBox(LtrUri,LtrNode):
                 absent.name = current.name
                 absent.path = current.path
                 absent.boxname = self.id
-                if "copy" in absent.flags:
-                    absent.flags.append("copy")
                 absent.addtime = time
                 show("w %s\n" %(absent.getVolPath()))
                 if current.ftype == "dir":
                     queue.append((current,absent))
                 wanted.append((current,absent))
+
+        print "ltr: copying %d files" % len(wanted)
 
         for (current,updating) in wanted:
             src = os.path.join(srcbox.fspath,current.getVolPath().strip("/"))
@@ -162,10 +160,10 @@ class LtrBox(LtrUri,LtrNode):
                 if not dryrun:
                     os.mkdir(dst)
         
-            if not "copy" in updating.flags:
-                updating.flags.append("copy")
-            if "deleted" in updating.flags:
-                updating.flags.remove("deleted")
+            if not "c" in updating.flags:
+                updating.flags.append("c")
+            if "s" in updating.flags:
+                updating.flags.remove("s")
             updating.log.append({"dt": time, "etype": "pull", "old":current.id})
             updating.updateDrop(current)
             updates.append(updating)
@@ -217,16 +215,16 @@ class LtrBox(LtrUri,LtrNode):
                 if updating.ftype == "dir":
                     queue.append((existing,updating))
 
-            for gone in map(lambda x:target.get(x),absent):
+            for gone in absent:
+                gone = target.get(gone)
                 if gone.ftype == "dir":
                     queue.append((LtrDrop(gone.name,gone.path,self.fspath),gone))
-                if "copy" in absent.flags:
+                if "c" in gone.flags:
                     show("D %s\n" %(gone.getVolPath()))
-                if "copy" in absent.flags:
-                    absent.flags.remove("copy")
+                    gone.flags.remove("c")
                 updates.append(gone)
-                if self.policy == "complete":
-                    show("w %s\n" %(gone.getVolPath()))
+                if not "c" in gone.flags and not "s" in gone.flags:
+                    show("W %s\n" %(gone.getVolPath()))
 
             for new in map(lambda x:source.get(x),srcunique):
 
@@ -235,8 +233,8 @@ class LtrBox(LtrUri,LtrNode):
                 show("[ updateDrop %s ]" % new.volpath )
                 newnode.updateDrop(new,dryrun=dryrun)
                 newnode.boxname = self.id
-                if not "copy" in newnode.flags:
-                    newnode.flags.append("copy")
+                if not "c" in newnode.flags:
+                    newnode.flags.append("c")
                 newnode.addtime = time
                 show("N %s\n" %(new.volpath))
                 updates.append(newnode)
@@ -259,7 +257,7 @@ class LtrBox(LtrUri,LtrNode):
         self.id = self.boxname
         self.path = "/"
         self.name = ""
-        self.flags = ["copy","boxroot"]
+        self.flags = ["c","b"]
         self.doctype = "node"
         self.policy = "complete"
         self.couchurl = self.spaceuri

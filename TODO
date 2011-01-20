@@ -1,5 +1,8 @@
 
-node.flags: str[] ;["wanted","skip","deleted","copy"]
+FIXME: .diff compares flags, will compare unique attributes;
+ restrict this to c copy/checked
+
+boxurl -> urls
 
 removing file from disk changes it to "Trashed" state.
 ltr tidy makes you choose:

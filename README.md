@@ -102,10 +102,18 @@ streamlined like this:
 info:
 
 * N New
-* L lost (last copy disapeared)
-* w wanted (queued)
-* D discarded (ltr rm)
+* C copy in sync (hidden from display by default)
 * M modified
+* D discarded (removed from box)
+* W wanted (awaiting fetch)
+* L lost (last copy disapeared)
+
+flags:
+
+* s skip (marked skip or deleted on this disk by user, not automatically fetched)
+* p purge from space (ltr rm)
+* c copy present in box
+* b box
 
 ### ltr commit
 

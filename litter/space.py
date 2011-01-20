@@ -10,7 +10,7 @@ views = {
     { 
         if (doc.doctype != "node") return; 
         if (!doc.flags) return; 
-        doc.flags.forEach(function emitdoc(x) {if (x == "boxroot")emit(doc._id,doc);} );
+        doc.flags.forEach(function emitdoc(x) {if (x == "b")emit(doc._id,doc);} );
     }"""},
     'by-hash': { 'map': "function(doc) { if (doc.doctype == \"node\" && doc.hash) emit(doc.hash, doc); }" },
     'children': { 'map': "function(doc) { if (doc.doctype == \"node\") emit(doc.path, doc._id); }"},
