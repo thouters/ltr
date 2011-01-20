@@ -77,12 +77,13 @@ streamlined like this:
 
 ### Create LtrSpace and box
 
-    thomas@maytag ~ % mkdir xyz; cd xyz
-    thomas@maytag ~ % ltr create http://thomas:geheim@localhost:5984/testspace/boxname .
+    thomas@maytag ~ % ltr init http://thomas:geheim@maytag:5984/testspace
     ltr: create database  testspace
     ltr: push design docs  testspace
-    ltr: new box to database  <ltrbox testspace/boxname >
-    ltr: wrote cookie for  boxname
+    thomas@maytag ~ % mkdir xyz; cd xyz
+    thomas@maytag ~ % ltr create http://thomas:geheim@maytag:5984/testspace box@maytag .
+    ltr: new box to database  <ltrbox testspace/box@maytag >
+    ltr: wrote cookie for box@maytag
 
 ### ltr status
 
@@ -118,11 +119,27 @@ info:
     thomas@maytag xyz %
 
 ### clone box
-
-    thomas@maytag ~ % cd ..; mkdir box2dir; cd box2dir
-    thomas@maytag box2dir % ltr clone box2 ../xyz .
-    ltr: new box to database  <ltrbox testspace/box2 >
-    ltr: wrote cookie for  box2
+    (actions performed on different computer)
+    thomas@bauknecht ~ % ltr init http://thomas:geheim@bauknecht:5984/testspace
+    ltr: create database  testspace
+    ltr: push design docs  testspace
+    thomas@bauknecht ~ % ltr sync -d http://thomas:geheim@maytag:5984/testspace -D http://thomas:geheim@bauknecht:5984/testspace
+    ltr: sync http://thomas:geheim@localhost:5984/x1 http://thomas:geheim@localhost:5984/x2
+    {'doc_write_failures': 0,
+    'docs_read': 14,
+    'docs_written': 14,
+    'end_last_seq': 15,
+    'end_time': 'Mon, 17 Jan 2011 22:31:59 GMT',
+    'missing_checked': 0,
+    'missing_found': 14,
+    'recorded_seq': 15,
+    'session_id': '620c1a75f8307b30a43ba4b6671a465b',
+    'start_last_seq': 0,
+    'start_time': 'Mon, 17 Jan 2011 22:31:58 GMT'}
+    thomas@bauknecht ~ % cd mkdir box2dir; cd box2dir
+    thomas@bauknecht box2dir % ltr create http://thomas:geheim@bauknecht:5984/testspace box@bauknecht .
+    ltr: new box to database  <ltrbox testspace/box@bauknecht >
+    ltr: wrote cookie for  box@bauknecht
     thomas@maytag box2dir % ltr
     w /abc
     w /def
@@ -132,12 +149,13 @@ info:
 
 ### pull user@host:/path/to/another-box
 
-    thomas@maytag box2dir % ltr pull ../xyz
-    ltr: pull  ../xyz
-    cp ../xyz/notes.html /home/thomas/box2dir/notes.html
-    cp ../xyz/def /home/thomas/box2dir/def
-    cp ../xyz/subdir1 /home/thomas/box2dir/subdir1/maximus_0.4.14.orig.tar.gz
-    cp ../xyz/abc /home/thomas/box2dir/abc
+    thomas@bauknecht box2dir % ltr pull box@maytag
+    ltr: pull  box@maytag
+    scp sftp://thomas@maytag/.../xyz/notes.html /home/thomas/box2dir/notes.html
+    scp sftp://thomas@maytag/.../xyz/def /home/thomas/box2dir/def
+    mkdir /home/thomas/box2dir/subdir1
+    scp sftp://thomas@maytag/.../xyz/subdir1/maximus_0.4.14.orig.tar.gz /home/thomas/box2dir/subdir1
+    scp sftp://thomas@maytag/.../xyz/abc /home/thomas/box2dir/abc
     ....
     thomas@maytag box2dir % 
 
