@@ -2,9 +2,7 @@
 FIXME: .diff compares flags, will compare unique attributes;
  restrict this to c copy/checked
 
-boxurl -> urls
-
-removing file from disk changes it to "Trashed" state.
+removing file from disk changes it to "ghost" state.
 ltr tidy makes you choose:
  a) propagate deleted status to other boxes
  b) marking file(s) as "skip" for local box
@@ -22,7 +20,7 @@ Ltr wishlist
 # Tarball incremental backup plugin 
 # Pgp encrypted files plugin
 # time machine plugin
-# Flat checkout plugin; commit does not add new files, you have to ltr insert path filename
+# Flat checkout plugin; commit does not add new files, you have to ltr insert manually (path,filename)
 # box quota
 # redundancy plugin
 # online/offline attribute
@@ -48,10 +46,6 @@ database: need more abstraction
 status: recognise change in filetypes
 ltrbox property: repository (expect no user edits)
 ltrnode property: added-to-volume-time 
-ltrbox property: rootchild
-ltrbox id: human readable
-ltrnode property: pending = [boxid,..] copy file to box
-client: DB replication 
 client: status diffstat-style output
 client: couchdb conflict handling
 client: transaction logging to DB (commit/pull document)

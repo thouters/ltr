@@ -215,7 +215,7 @@ class LtrCli:
         if args.boxname != ".":
             #lookup sftp://path
             srcbox = dstbox.space.getBox(args.boxname)
-            srcbox.fspath = srcbox.boxurl[len("sftp://localhost"):]
+            srcbox.fspath = srcbox.fileurls[0][len("sftp://localhost"):]
         else:
             src = args.src.strip()
             srcbox = LtrSpace.boxFromCookie(src,space=dstbox.space)

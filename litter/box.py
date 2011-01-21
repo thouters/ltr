@@ -19,14 +19,14 @@ def dictbyname(l):
 class LtrBox(LtrUri,LtrNode):
     policy = TextField()
     rootnode = TextField()
-    boxurl = TextField()
-    couchurl = TextField()
+    fileurls = ListField(TextField())
+    database = TextField()
 
     def info(self):
         s = ""
         s += "policy: %s\n" % self.policy
-        s += "boxurl: %s\n" % self.boxurl
-        s += "couchurl: %s\n" % self.couchurl
+        s += "files: %s\n" % self.fileurls
+        s += "database: %s\n" % self.database
         return s
 
     def __repr__(self):
@@ -260,7 +260,7 @@ class LtrBox(LtrUri,LtrNode):
         self.flags = ["c","b"]
         self.doctype = "node"
         self.policy = "complete"
-        self.couchurl = self.spaceuri
+        self.database = self.spaceuri
         print "ltr: new box to database ", self
         self.store(self.space.records)
 
