@@ -9,14 +9,18 @@ features = {
     "symlink":["ftype","mtime"]
     }
 
-ltrflags = {"s":"skip",
+flaginfo = {"s":"skip",
             "p": "purge",
             "c": "copy",
             "b": "box"   }
 
 class LtrNode(Document):
-    doctype = TextField()
+    SKIP_FLAG = "s"
+    PURGE_FLAG = "p"
+    COPY_FLAG = "c"
+    BOX_FLAG = "b"
 
+    doctype = TextField()
     name = TextField()
     path = TextField()
     boxname = TextField()
@@ -107,7 +111,7 @@ class LtrNode(Document):
         s+= "type: %s\n"  % self.ftype
         s+= "mimetype: %s\n" % self.mimetype
         s+= "sha1sum: %s\n" % self.hash
-        s+= "flags: %s\n" % ",".join(map(lambda f: ltrflags.get(f,f),self.flags))
+        s+= "flags: %s\n" % ",".join(map(lambda f: flaginfo.get(f,f),self.flags))
         return s
 
 

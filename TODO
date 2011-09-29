@@ -4,8 +4,9 @@ FIXME: .diff compares flags, will compare unique attributes;
 
 removing file from disk changes it to "ghost" state.
 ltr tidy makes you choose:
- a) propagate deleted status to other boxes
- b) marking file(s) as "skip" for local box
+ a) propagate deleted status to other boxes (ltr purge filespec)
+ b) marking file(s) as "skip" for local box (ltr discard filespec)
+
 
 
 node-logentry-example:
@@ -22,11 +23,11 @@ Ltr wishlist
 # time machine plugin
 # Flat checkout plugin; commit does not add new files, you have to ltr insert manually (path,filename)
 # box quota
-# redundancy plugin
+# redundancy plugin: enforce redundant-copy policy
 # online/offline attribute
  disk-by-label://green/Mybox
 
-ltr diff
+ltr diff (-f; fetch and run real diff)
 ltr update (trigger couchdb replicate)
 ltr: "ping boxname" command (attempt to access other box and set it as origin) 
 
@@ -38,14 +39,11 @@ ltrbox crawler: unittests
 document: pull request: {ctime, status, uri=user@host:/path}
 client: wait on _changes for pull requests
 ltr: node attribute 'missing'; missing.append(boxname) for boxname if boxname.policy == complete
-ltr: missing; yield [boxname,nest-depth,id] for node if len(node.missing)
-ltrnode property: meta.nest-depth
 path property: use parent id
 code: license headers
-database: need more abstraction
 status: recognise change in filetypes
 ltrbox property: repository (expect no user edits)
-ltrnode property: added-to-volume-time 
+ltrnode property: added-to-volume-time (eg: pickup-time?)
 client: status diffstat-style output
 client: couchdb conflict handling
 client: transaction logging to DB (commit/pull document)

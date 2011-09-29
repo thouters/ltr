@@ -2,7 +2,7 @@ import os
 from drop import LtrDrop
 from uri import LtrUri
 from node import LtrNode
-from couchdb.mapping import TextField
+from couchdb.mapping import TextField, ListField
 import shutil
 import sys
 import uuid
@@ -30,7 +30,7 @@ class LtrBox(LtrUri,LtrNode):
         return s
 
     def __repr__(self):
-        s = "<ltrbox %s/%s >" % (self.space.name,self.id)
+        s = "<ltrbox %s::%s >" % (self.space.name,self.id)
         return s
 
     def __init__(self,space=False):
@@ -119,7 +119,7 @@ class LtrBox(LtrUri,LtrNode):
                 #fixme, query DB for matching size,hash tuples
                 current = source[filename]
                 updating = target[filename]
-                if "s" in updating.flags:
+                if LtrNode.SKIP_FLAG in updating.flags:
                     continue
                 diff  = updating.diff(current)
                 if diff != []:
@@ -160,10 +160,10 @@ class LtrBox(LtrUri,LtrNode):
                 if not dryrun:
                     os.mkdir(dst)
         
-            if not "c" in updating.flags:
-                updating.flags.append("c")
-            if "s" in updating.flags:
-                updating.flags.remove("s")
+            if not LtrNode.COPY_FLAG in updating.flags:
+                updating.flags.append(LtrNode.COPY_FLAG)
+            if LtrNode.SKIP_FLAG in updating.flags:
+                updating.flags.remove(LtrNode.SKIP_FLAG)
             updating.log.append({"dt": time, "etype": "pull", "old":current.id})
             updating.updateDrop(current)
             updates.append(updating)
@@ -219,11 +219,12 @@ class LtrBox(LtrUri,LtrNode):
                 gone = target.get(gone)
                 if gone.ftype == "dir":
                     queue.append((LtrDrop(gone.name,gone.path,self.fspath),gone))
-                if "c" in gone.flags:
+                if LtrNode.COPY_FLAG in gone.flags:
                     show("D %s\n" %(gone.getVolPath()))
-                    gone.flags.remove("c")
+                    gone.flags.remove(LtrNode.COPY_FLAG)
                 updates.append(gone)
-                if not "c" in gone.flags and not "s" in gone.flags:
+                if not LtrNode.COPY_FLAG in gone.flags \
+                   and not LtrNode.SKIP_FLAG in gone.flags:
                     show("W %s\n" %(gone.getVolPath()))
 
             for new in map(lambda x:source.get(x),srcunique):
@@ -233,8 +234,8 @@ class LtrBox(LtrUri,LtrNode):
                 show("[ updateDrop %s ]" % new.volpath )
                 newnode.updateDrop(new,dryrun=dryrun)
                 newnode.boxname = self.id
-                if not "c" in newnode.flags:
-                    newnode.flags.append("c")
+                if not LtrNode.COPY_FLAG in newnode.flags:
+                    newnode.flags.append(LtrNode.COPY_FLAG)
                 newnode.addtime = time
                 show("N %s\n" %(new.volpath))
                 updates.append(newnode)
@@ -257,7 +258,7 @@ class LtrBox(LtrUri,LtrNode):
         self.id = self.boxname
         self.path = "/"
         self.name = ""
-        self.flags = ["c","b"]
+        self.flags = [LtrNode.COPY_FLAG,LtrNode.BOX_FLAG]
         self.doctype = "node"
         self.policy = "complete"
         self.database = self.spaceuri

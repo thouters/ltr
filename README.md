@@ -170,5 +170,4 @@ flags:
 ## Roadmap
 
 * checking off the TODO file
-* using python-paramiko for network transparency (ssh)
-* moving to python-twisted 
+* using python-paramiko for cross platform network transparency (ssh)
